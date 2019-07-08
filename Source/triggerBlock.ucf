@@ -1,0 +1,4 @@
+
+#Created by Constraints Editor (xc6slx16-ftg256-3) - 2019/07/07
+NET "clock" TNM_NET = clock;
+TIMESPEC TS_clock = PERIOD "clock" 10 ns HIGH 50%;
