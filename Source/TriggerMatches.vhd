@@ -114,8 +114,8 @@ begin
             currentSample => currentSample,       -- Current sample data
             lastSample    => lastSample,          -- Prevous sample data
             
-            triggerA      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index+1),  -- Comparison output
-            triggerB      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index),    -- Comparison output
+            trigger1      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index+1),  -- Comparison output
+            trigger0      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index),    -- Comparison output
 
             -- LUT serial configuration (NUM_INPUTS/2 LUTs)
             lut_clock      => lut_clock,                  -- Used for LUT shift register          

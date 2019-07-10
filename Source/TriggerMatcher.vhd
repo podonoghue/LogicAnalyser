@@ -66,7 +66,7 @@ architecture behavioral of TriggerMatcher is
 
 -- Each LUT implements a 2-bit trigger detector
 constant BITS_PER_LUT : integer := 2;
-constant NUM_LUTS     : integer := NUM_INPUTS/BITS_PER_LUT;
+constant NUM_LUTS     : integer := SAMPLE_WIDTH/BITS_PER_LUT;
 
 signal comparison1  : std_logic_vector(NUM_LUTS-1 downto 0);
 signal comparison0  : std_logic_vector(NUM_LUTS-1 downto 0);

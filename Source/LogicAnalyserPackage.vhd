@@ -39,7 +39,7 @@ subtype LutConfigType is std_logic_vector(NUM_LUT_BITS-1 downto 0);
 -- Triggering
 
 -- Maximum number of steps in complex trigger sequence
-constant MAX_TRIGGER_STEPS  : positive := 4;
+constant MAX_TRIGGER_STEPS  : positive := 16;
 
 -- Type for a trigger iteration
 subtype TriggerRangeType is integer range 0 to MAX_TRIGGER_STEPS-1;
