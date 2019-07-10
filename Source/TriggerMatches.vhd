@@ -16,6 +16,32 @@ use work.LogicAnalyserPackage.all;
 -- The trigger condition is encoded in the LUT.
 --
 -- The current trigger is selected by triggerStep.
+--
+-- LUT serial configuration:
+--   Comparators: MAX_TRIGGER_STEPS * MAX_CONDITIONS/2 * NUM_INPUTS/2 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_CONDITIONS)/4 LUTs
+--   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
+--
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_CONDITIONS=4, NUM_INPUTS=16)
+--
+-- Number of LUTs:
+--   Comparators: MAX_TRIGGER_STEPS * MAX_CONDITIONS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_CONDITIONS/4                = 16 * 4/4        =  16 LUTs
+--   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16                    =  2 * 16/16      =   2 LUT
+--
+-- +-------------+-------------+-------------+------------+-------------+-------------+
+-- |  Combiner   | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
+-- +-------------+-------------+-------------+------------+-------------+-------------+
+-- |LUT(272..256)|LUT(255..240)|LUT(239..224)|            | LUT(31..16) |  LUT(15..0) |
+-- +-------------+-------------+-------------+------------+-------------+-------------+
+--   See                       |             |
+--   Combiner      +-----------+             +-------------+
+--                 |                                       |
+--                 +-------------------+-------------------+
+--                 |  TriggerMatcher   |  TriggerMatcher   |  See TriggerMatcher
+--                 |   LUT(239..232)   |   LUT(231..224)   |  for detailed mapping (8 LUTs)
+--                 +-------------------+-------------------+
+--
 --==============================================================================================
 entity TriggerMatches is
     port ( 
@@ -27,8 +53,9 @@ entity TriggerMatches is
          trigger       : out std_logic;         -- Trigger output for current trigger step
                                     
          -- LUT serial configuration 
-         -- MAX_TRIGGER_STEPS * MAX_CONDITIONS of NUM_INPUTS/2 LUTs
-         -- => MAX_TRIGGER_STEPS * MAX_CONDITIONS of NUM_INPUTS/2 x 32 bits config data 
+         --   Comparators: MAX_TRIGGER_STEPS * MAX_CONDITIONS/2 * NUM_INPUTS/2 LUTs
+         --   Combiner:    MAX_TRIGGER_STEPS*MAX_CONDITIONS/4 LUTs
+         --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
          lut_clock      : in  std_logic;  -- Used for LUT shift register          
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
@@ -38,8 +65,8 @@ end TriggerMatches;
 
 architecture Behavioral of TriggerMatches is
 
-constant TRIGGERS_PER_BLOCK : positive := 2;
-constant NUM_TRIGGER_BLOCKS : positive := MAX_CONDITIONS/TRIGGERS_PER_BLOCK;
+constant COMPARATORS_PER_BLOCK : positive := 2;
+constant NUM_TRIGGER_BLOCKS    : positive := MAX_CONDITIONS/COMPARATORS_PER_BLOCK;
 
 signal chainIn     : std_logic_vector(MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS-1 downto 0);
 signal chainOut    : std_logic_vector(MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS-1 downto 0);
@@ -61,7 +88,7 @@ begin
       conditions     => conditions,       -- Current sample data
       triggers       => triggers,         -- Previous sample data
                                      
-      -- LUT serial configuration 
+      -- LUT serial configuration (MAX_TRIGGER_STEPS*MAX_CONDITIONS)/4 LUTs)
       lut_clock      => lut_clock,        -- LUT shift-register clock
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chain,        -- Serial configuration data input (MSB first)
@@ -87,10 +114,10 @@ begin
             currentSample => currentSample,       -- Current sample data
             lastSample    => lastSample,          -- Prevous sample data
             
-            triggerA      => conditions(triggerStep)(TRIGGERS_PER_BLOCK*index+1),  -- Comparison output
-            triggerB      => conditions(triggerStep)(TRIGGERS_PER_BLOCK*index),    -- Comparison output
+            triggerA      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index+1),  -- Comparison output
+            triggerB      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index),    -- Comparison output
 
-            -- LUT serial configuration 
+            -- LUT serial configuration (NUM_INPUTS/2 LUTs)
             lut_clock      => lut_clock,                  -- Used for LUT shift register          
             lut_config_ce  => lut_config_ce,              -- Clock enable for LUT shift register
             lut_config_in  => chainIn(lut_config_index),  -- Serial in for LUT shift register (MSB first)

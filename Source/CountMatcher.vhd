@@ -12,23 +12,44 @@ use unisim.vcomponents.all;
 --=================================================================
 -- Implements 2 of MATCH_COUNTER_BITS-wide fixed value comparators
 -- The comparison value is encoded in the LUT
---=================================================================
-entity CountMatcher is
+-- 
+-- Each LUT implement 4-bots of the countercomparator
+--
+-- Example MATCH_COUNTER_BITS=16
+-- MATCH_COUNTER_BITS/4 LUTs
+--
+-- +-----------+-----------+-----------+-----------+
+-- |  LUT(3)   |  LUT(2)   |  LUT(1)   |  LUT(0)   |
+-- +-----------+-----------+-----------+-----------+
+-- |          16-bit counter match value           |
+-- +-----------+-----------+-----------+-----------+
+-- |                                               |
+-- +                                               +---------------+
+-- |                                                               |
+-- |             Mapping for a typical LUT                         |
+-- +---------------------------------------------------------------+
+-- |3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1                    | 
+-- |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0| <- LUT bit #
+-- +---------------+---------------+---------------+---------------+
+-- The CFGLUT5 are treated as LUT4. Each LUT4 matches 4 counter bits
+--
+--========================================================================
+entity CountMatcherPair is
     port ( 
          -- Trigger logic
          count      : in  MatchCounterType; -- Current match counter value
          equalA     : out std_logic;        -- Comparator output A
          equalB     : out std_logic;        -- Comparator output B
 
-         -- LUT serial configuration NUM_LUTS x 32 bits = NUM_LUTS LUTs
+         -- LUT serial configuration: MATCH_COUNTER_BITS/4 LUTs
          lut_clock      : in  std_logic;  -- Used for LUT shift register          
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
          lut_config_out : out std_logic   -- Serial out for LUT shift register
    );
-end CountMatcher;
+end CountMatcherPair;
 
-architecture behavioral of CountMatcher is
+architecture behavioral of CountMatcherPair is
 
 -- Each LUT implements a 4-bits of the comparator   
 constant BITS_PER_LUT : integer := 4;

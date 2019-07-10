@@ -18,9 +18,7 @@ entity CountMatches is
 
          equal        : out std_logic;         -- Counter equal for current trigger step
 
-         -- LUT serial configuration 
-         -- MAX_TRIGGER_STEPS * MATCH_COUNTER_BITS/4 LUTs
-         -- => MAX_TRIGGER_STEPS * MATCH_COUNTER_BITS/4 x 32 bits config data 
+         -- LUT serial configuration: MAX_TRIGGER_STEPS/2 * MATCH_COUNTER_BITS/4 LUTs
          lut_clock      : in  std_logic;  -- Used for LUT shift register          
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
@@ -44,7 +42,7 @@ begin
 
    GenerateTriggers: 
    for index in NUM_COMPARATOR_BLOCKS-1 downto 0 generate
-      CountMatcher_inst : entity work.CountMatcher
+      CountMatcherPair_inst : entity work.CountMatcherPair
       port map (
          -- Logic function
          count   => count,                                -- Current counter value

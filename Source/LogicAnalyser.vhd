@@ -6,7 +6,7 @@ use ieee.std_logic_1164.all;
 use work.all;
 use work.LogicAnalyserPackage.all;
  
-entity logicanalyser is
+entity LogicAnalyser is
    port ( 
       reset          : in  std_logic;
       clock          : in  std_logic;
@@ -22,9 +22,9 @@ entity logicanalyser is
       lut_config_in  : in  std_logic;  -- Serial in for LUT shift register MSB first in
       lut_config_out : out std_logic   -- Serial out for LUT shift register
   );
-end logicanalyser;
+end LogicAnalyser;
  
-architecture behavior of logicanalyser is 
+architecture Behavior of LogicAnalyser is 
  
    -- --Inputs
    -- signal reset : std_logic := '0';

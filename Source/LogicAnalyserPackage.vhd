@@ -21,10 +21,10 @@ subtype DataBusType is std_logic_vector(BUS_WIDTH-1 downto 0);
 -- Sample inputs
 
 -- Number of sample inputs
-constant NUM_INPUTS : positive := 16;
+constant SAMPLE_WIDTH : positive := 16;
 
 -- Data type used for sample data paths
-subtype SampleDataType is std_logic_vector(NUM_INPUTS-1 downto 0);
+subtype SampleDataType is std_logic_vector(SAMPLE_WIDTH-1 downto 0);
 
 --==========================================================
 -- LUTs

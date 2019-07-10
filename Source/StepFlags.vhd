@@ -12,6 +12,29 @@ use unisim.vcomponents.all;
 --=================================================================
 -- Implements simple LUT to provide flags for each trigger step
 -- The flags are encoded in the LUT
+--
+-- LUT serial configuration:
+-- NUM_FLAGS LUTs
+--
+-- Each LUT implements 1 flag.
+--
+-- Example LUT bit mapping in LUT chain(NUM_FLAGS=2)
+-- NUM_INPUTS/2 LUTs =>16/2 = 8
+--
+-- +-----------+-----------+
+-- |  LUT(1)   |  LUT(0)   |
+-- +-----------+-----------+
+-- |  Flag(1)  |  Flag(0)  |
+-- +-----------+-----------+
+--             |           |
+-- +-----------+           +---------------------------------------+
+-- |                                                               |
+-- |             Mapping for an typical LUT                        |
+-- +---------------------------------------------------------------+
+-- |3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1                    | 
+-- |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0| <- LUT bit #
+-- +---------------+---------------+---------------+---------------+
+-- The CFGLUT5 are treated as LUT5. Each LUT5 provides 1 flag
 --=================================================================
 entity StepFlags is
     generic (

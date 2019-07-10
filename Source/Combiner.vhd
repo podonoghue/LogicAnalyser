@@ -9,11 +9,69 @@ use work.LogicAnalyserPackage.all;
 library unisim;
 use unisim.vcomponents.all;
 
---============================================================================
--- Implements a MAX_TRIGGER_STEPS logical operations of MAX_CONDITIONS-wide 
+--=================================================================================
+-- Implements MAX_TRIGGER_STEPS logical operations on MAX_CONDITIONS-wide inputs
+-- i.e. MTS x MC -> MTS outputs
+--
 -- MAX_CONDITIONS must be 2 or 4
 -- The logical operation value is encoded in the LUT
---============================================================================
+--
+-- LUT serial configuration:
+-- MAX_TRIGGER_STEPS*MAX_CONDITIONS/4 LUTs
+--
+-- Each LUT implements 4 bit-wide logic function.
+--
+--
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_CONDITIONS=2)
+-- 
+-- Number of LUTs = MAX_TRIGGER_STEPS*MAX_CONDITIONS/4 = 16 * 2/4 = 8 LUTs
+--
+-- +-------------+-------------+------------+-------------+-------------+
+-- | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
+-- +-------------+-------------+------------+-------------+-------------+
+-- |           LUT(7)          | ...    ... |           LUT(0)          |
+-- +-------------+-------------+------------+-------------+-------------+
+-- |                           |
+-- |                           +-----------------------------------+
+-- |                                                               |
+-- |              Mapping for a typical LUT                        |
+-- +---------------------------------------------------------------+
+-- |3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1                    | 
+-- |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0| <- LUT bit #
+-- +---------------+---------------+---------------+---------------+
+-- |          TRIGGER 15           |           TRIGGER 14          | <- Pair of triggers
+-- +---------------+---------------+---------------+---------------+
+-- |     COMP 1    |    COMP 0     |    COMP 1     |    COMP 0     | <- Comparators in trigger
+-- +---------------+---------------+---------------+---------------+
+-- The CFGLUT5 are treated as 2 x LUT4s. 
+-- Each LUT4 handles 2 comparators from one trigger ignoring 2 comparators from other trigger 
+--
+--
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_CONDITIONS=4)
+-- 
+-- Number of LUTs = MAX_TRIGGER_STEPS*MAX_CONDITIONS/4 = 16 * 4/4 = 16 LUTs
+--
+-- +-------------+-------------+------------+-------------+-------------+
+-- | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
+-- +-------------+-------------+------------+-------------+-------------+
+-- |   LUT(15)   |   LUT(14)   | ...    ... |   LUT(1)    |   LUT(0)    |
+-- +-------------+-------------+------------+-------------+-------------+
+-- |             |
+-- |             +-------------------------------------------------+
+-- |                                                               |
+-- |              Mapping for a typical LUT                        |
+-- +---------------------------------------------------------------+
+-- |3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1                    | 
+-- |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0| <- LUT bit #
+-- +---------------+---------------+---------------+---------------+
+-- |                          TRIGGER 15                           | <- Single triggers
+-- +---------------+---------------+---------------+---------------+
+-- |     COMP 3    |    COMP 2     |    COMP 1     |    COMP 0     | <- Comparators in trigger
+-- +---------------+---------------+---------------+---------------+
+-- The CFGLUT5 are treated as 2 x LUT4s. 
+-- One LUT4 handles 4 comparators from one trigger, the other LUT4 is unused
+--
+--=================================================================================
 entity Combiner is
     port ( 
          -- Trigger logic
@@ -21,7 +79,7 @@ entity Combiner is
          -- Trigger output combining conditions
          triggers       : out std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0); 
          
-         -- LUT serial configuration NUM_LUTS x 32 bits = NUM_LUTS LUTs
+         -- LUT serial configuration: MAX_TRIGGER_STEPS*MAX_CONDITIONS)/4 LUTs
          lut_clock      : in  std_logic;  -- Used for LUT shift register          
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
