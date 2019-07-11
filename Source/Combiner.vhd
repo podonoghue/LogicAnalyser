@@ -10,21 +10,21 @@ library unisim;
 use unisim.vcomponents.all;
 
 --=================================================================================
--- Implements MAX_TRIGGER_STEPS logical operations on MAX_CONDITIONS-wide inputs
+-- Implements MAX_TRIGGER_STEPS logical operations on MAX_TRIGGER_CONDITIONS-wide inputs
 -- i.e. MTS x MC -> MTS outputs
 --
--- MAX_CONDITIONS must be 2 or 4
+-- MAX_TRIGGER_CONDITIONS must be 2 or 4
 -- The logical operation value is encoded in the LUT
 --
 -- LUT serial configuration:
--- MAX_TRIGGER_STEPS*MAX_CONDITIONS/4 LUTs
+-- MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS/4 LUTs
 --
 -- Each LUT implements 4 bit-wide logic function.
 --
 --
--- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_CONDITIONS=2)
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_TRIGGER_CONDITIONS=2)
 -- 
--- Number of LUTs = MAX_TRIGGER_STEPS*MAX_CONDITIONS/4 = 16 * 2/4 = 8 LUTs
+-- Number of LUTs = MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS/4 = 16 * 2/4 = 8 LUTs
 --
 -- +-------------+-------------+------------+-------------+-------------+
 -- | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
@@ -47,9 +47,9 @@ use unisim.vcomponents.all;
 -- Each LUT4 handles 2 comparators from one trigger ignoring 2 comparators from other trigger 
 --
 --
--- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_CONDITIONS=4)
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_TRIGGER_CONDITIONS=4)
 -- 
--- Number of LUTs = MAX_TRIGGER_STEPS*MAX_CONDITIONS/4 = 16 * 4/4 = 16 LUTs
+-- Number of LUTs = MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS/4 = 16 * 4/4 = 16 LUTs
 --
 -- +-------------+-------------+------------+-------------+-------------+
 -- | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
@@ -79,7 +79,7 @@ entity Combiner is
          -- Trigger output combining conditions
          triggers       : out std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0); 
          
-         -- LUT serial configuration: MAX_TRIGGER_STEPS*MAX_CONDITIONS)/4 LUTs
+         -- LUT serial configuration: MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS)/4 LUTs
          lut_clock      : in  std_logic;  -- Used for LUT shift register          
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
@@ -91,7 +91,7 @@ architecture behavioral of Combiner is
 
 -- Each LUT can implement up to 4 inputs   
 constant BITS_PER_LUT       : integer := 4;
-constant NUM_LUTS           : integer := (MAX_TRIGGER_STEPS*MAX_CONDITIONS)/BITS_PER_LUT;
+constant NUM_LUTS           : integer := (MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS)/BITS_PER_LUT;
 
 signal lut_chainIn  : std_logic_vector(NUM_LUTS-1 downto 0);
 signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
@@ -99,7 +99,7 @@ signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
 begin
 
    GenerateLogic2:
-   if (MAX_CONDITIONS = 2) generate
+   if (MAX_TRIGGER_CONDITIONS = 2) generate
 
    -- Each LUT implements 2 independent logical operation on 2 Conditions (2 of 2->1 operations)    
    constant CONDITIONS_PER_LUT : integer := 2;
@@ -133,7 +133,7 @@ begin
    end generate;
          
    GenerateLogic4:
-   if (MAX_CONDITIONS = 4) generate
+   if (MAX_TRIGGER_CONDITIONS = 4) generate
    begin
       GenerateLogicBlock4: 
       for index in NUM_LUTS-1 downto 0 generate

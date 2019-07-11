@@ -45,7 +45,7 @@ constant MAX_TRIGGER_STEPS  : positive := 16;
 subtype TriggerRangeType is integer range 0 to MAX_TRIGGER_STEPS-1;
 
 -- Maximum number of conditions for each trigger step (either 2 or 4)
-constant MAX_CONDITIONS  : positive := 2;
+constant MAX_TRIGGER_CONDITIONS  : positive := 2;
 
 -- Number of bits for counter for each trigger step
 constant MATCH_COUNTER_BITS  : positive := 16;
@@ -54,6 +54,6 @@ constant MATCH_COUNTER_BITS  : positive := 16;
 subtype MatchCounterType is unsigned(MATCH_COUNTER_BITS-1 downto 0);
  
  -- Type for array of all trigger conditions used 
-type TriggerConditionArray is array (MAX_TRIGGER_STEPS-1 downto 0) of std_logic_vector(MAX_CONDITIONS-1 downto 0);
+type TriggerConditionArray is array (MAX_TRIGGER_STEPS-1 downto 0) of std_logic_vector(MAX_TRIGGER_CONDITIONS-1 downto 0);
 
 end LogicAnalyserPackage;

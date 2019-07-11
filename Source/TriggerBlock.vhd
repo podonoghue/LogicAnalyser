@@ -7,7 +7,7 @@ use work.all;
 use work.LogicAnalyserPackage.all;
 
 --==============================================================================================
--- Implements MAX_TRIGGER_STEPS * MAX_CONDITIONS of NUM_INPUTS-wide trigger circuits supporting 
+-- Implements MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS of NUM_INPUTS-wide trigger circuits supporting 
 --
 --    High    Low     Rising     Falling     Change
 --    -----              +---   ---+        ---+ +---
@@ -18,15 +18,15 @@ use work.LogicAnalyserPackage.all;
 -- The current trigger is selected by triggerStep.
 --
 -- LUT serial configuration:
---   Comparators: MAX_TRIGGER_STEPS * MAX_CONDITIONS/2 * NUM_INPUTS/2 LUTs
---   Combiner:    MAX_TRIGGER_STEPS * MAX_CONDITIONS)/4 LUTs
+--   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS)/4 LUTs
 --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
 --
--- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_CONDITIONS=4, NUM_INPUTS=16)
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_TRIGGER_CONDITIONS=4, NUM_INPUTS=16)
 --
 -- Number of LUTs:
---   Comparators: MAX_TRIGGER_STEPS * MAX_CONDITIONS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
---   Combiner:    MAX_TRIGGER_STEPS * MAX_CONDITIONS/4                = 16 * 4/4        =  16 LUTs
+--   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/4                = 16 * 4/4        =  16 LUTs
 --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16                    =  2 * 16/16      =   2 LUT
 -- TODO
 -- +-------------+-------------+-------------+-------------+-------------+------------+-------------+-------------+
@@ -100,8 +100,8 @@ begin
       trigger       => triggerFound,   -- Trigger found for current step
 
       -- LUT serial configuration:
-      --   Comparators: MAX_TRIGGER_STEPS * MAX_CONDITIONS/2 * NUM_INPUTS/2 LUTs
-      --   Combiner:    MAX_TRIGGER_STEPS * MAX_CONDITIONS)/4 LUTs
+      --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
+      --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS)/4 LUTs
       lut_clock      => lut_clock,        -- LUT shift-register clock
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chainIn(0),   -- Serial configuration data input (MSB first)
@@ -118,8 +118,8 @@ begin
       equal         => triggerCountEquals,   -- Comparator outputs
 
       -- LUT serial configuration:
-      --   Comparators: MAX_TRIGGER_STEPS * MAX_CONDITIONS/2 * NUM_INPUTS/2 LUTs
-      --   Combiner:    MAX_TRIGGER_STEPS * MAX_CONDITIONS)/4 LUTs
+      --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
+      --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS)/4 LUTs
       lut_clock      => lut_clock,        -- LUT shift-register clock
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chainIn(1),   -- Serial configuration data input (MSB first)
@@ -137,7 +137,7 @@ begin
       flags         => flags,                -- Comparator outputs
 
       -- LUT serial configuration 
-      -- MAX_TRIGGER_STEPS * MATCH_COUNTER_BITS/4 x 32 bits = MAX_CONDITIONS * NUM_INPUTS/2 LUTs
+      -- MAX_TRIGGER_STEPS * MATCH_COUNTER_BITS/4 x 32 bits = MAX_TRIGGER_CONDITIONS * NUM_INPUTS/2 LUTs
       lut_clock      => lut_clock,        -- LUT shift-register clock
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chainIn(2),   -- Serial configuration data input (MSB first)
