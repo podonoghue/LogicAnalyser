@@ -85,6 +85,13 @@ static constexpr int LUTS_PER_TRIGGER_STEP = MAX_TRIGGER_CONDITIONS*LUTS_PER_COM
 static constexpr int  MATCH_COUNTER_BITS = 16;
 
 //============================================================================================
+// Number of LUTS for configuration information
+static constexpr int NUM_CONFIG_WORDS = 10;
+
+// Each config word occupies a LUT
+static constexpr int LUTS_FOR_CONFIG  = NUM_CONFIG_WORDS/1;
+
+//============================================================================================
 // Number of LUTS for triggers
 static constexpr int LUTS_FOR_TRIGGERS = MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS*LUTS_PER_COMPARATOR;
 
@@ -107,7 +114,10 @@ static constexpr int LUTS_FOR_TRIGGERS_FLAGS = NUM_TRIGGER_FLAGS*ceil(MAX_TRIGGE
 // Offsets to LUT sections
 
 // Start of Trigger LUTs
-static constexpr int START_TRIGGER_LUTS          = 0;
+static constexpr int START_CONFIG_LUTS          = 0;
+
+// Start of Trigger LUTs
+static constexpr int START_TRIGGER_LUTS          = START_CONFIG_LUTS+LUTS_FOR_CONFIG;
 
 // Start of Trigger Combiner LUTs
 static constexpr int START_TRIGGER_COMBINER_LUTS = START_TRIGGER_LUTS+LUTS_FOR_TRIGGERS;
@@ -311,12 +321,13 @@ void testTriggerToLuts(
 void encodeTriggerToStep(
       const char *triggerB,
       const char *triggerA,
+	  const unsigned count,
       TriggerStep &triggerStep) {
 
    TriggerStep trgrStep = {
          triggerB,
          triggerA,
-         100,
+         count,
    };
    triggerStep = trgrStep;
 }
@@ -370,24 +381,24 @@ void testTrigger() {
 }
 
 int main() {
+   printf("NUM_CONFIG_WORDS         = %3d\n",   NUM_CONFIG_WORDS);
+   printf("SAMPLE_WIDTH             = %3d\n",   SAMPLE_WIDTH);
+   printf("MAX_TRIGGER_CONDITIONS   = %3d\n",   MAX_TRIGGER_CONDITIONS);
+   printf("MAX_TRIGGER_STEPS        = %3d\n",   MAX_TRIGGER_STEPS);
+   printf("MATCH_COUNTER_BITS       = %3d\n",   MATCH_COUNTER_BITS);
+   printf("NUM_TRIGGER_FLAGS        = %3d\n\n", NUM_TRIGGER_FLAGS);
 
-   printf("LUTS_FOR_TRIGGERS           = %d\n", LUTS_FOR_TRIGGERS);
-   printf("LUTS_FOR_COMBINERS          = %d\n", LUTS_FOR_COMBINERS);
-   printf("LUTS_FOR_TRIGGER_COUNTS     = %d\n", LUTS_FOR_TRIGGER_COUNTS);
-   printf("LUTS_FOR_TRIGGERS_FLAGS     = %d\n", LUTS_FOR_TRIGGERS_FLAGS);
-
-   printf("START_TRIGGER_LUTS          = %d\n", START_TRIGGER_LUTS);
-   printf("START_TRIGGER_COMBINER_LUTS = %d\n", START_TRIGGER_COMBINER_LUTS);
-   printf("START_TRIGGER_COUNTS        = %d\n", START_TRIGGER_COUNTS);
-   printf("START_TRIGGER_FLAG_LUTS     = %d\n", START_TRIGGER_FLAG_LUTS);
-
-
+   printf("LUTS_FOR_CONFIG          = [%3d  %3d]\n",   START_CONFIG_LUTS,             START_CONFIG_LUTS+LUTS_FOR_CONFIG-1);
+   printf("LUTS_FOR_TRIGGERS        = [%3d  %3d]\n",   START_TRIGGER_LUTS,            START_TRIGGER_LUTS+LUTS_FOR_TRIGGERS-1);
+   printf("LUTS_FOR_COMBINERS       = [%3d  %3d]\n",   START_TRIGGER_COMBINER_LUTS,   START_TRIGGER_COMBINER_LUTS+LUTS_FOR_COMBINERS-1);
+   printf("LUTS_FOR_TRIGGER_COUNTS  = [%3d  %3d]\n",   START_TRIGGER_COUNTS,          START_TRIGGER_COUNTS+LUTS_FOR_TRIGGER_COUNTS-1);
+   printf("LUTS_FOR_TRIGGERS_FLAGS  = [%3d  %3d]\n\n", START_TRIGGER_FLAG_LUTS,       START_TRIGGER_FLAG_LUTS+LUTS_FOR_TRIGGERS_FLAGS-1);
 
    TriggerStep trigger[MAX_TRIGGER_STEPS];
    uint32_t lutValues[LUTS_FOR_TRIGGERS];
 
    for (int step=MAX_TRIGGER_STEPS-1; step>=0; step--) {
-      encodeTriggerToStep("XXXXXXXXXXXXXXXX", "0XXXXXXXXXXXXXXX", trigger[step]);
+      encodeTriggerToStep("XXXXXXXXXXXXXXXX", "0XXXXXXXXXXXXXXX", 100, trigger[step]);
    }
 
    getTriggerLutValues(trigger, lutValues);

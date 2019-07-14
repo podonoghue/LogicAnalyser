@@ -109,7 +109,7 @@ begin
    );
 
    CountMatches_inst:
-   entity work.CountMatches
+   entity work.CountMatchers
    port map ( 
       -- Trigger logic
       count         => matchCounter,         -- Current match counter

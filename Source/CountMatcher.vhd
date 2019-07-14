@@ -38,8 +38,8 @@ entity CountMatcherPair is
     port ( 
          -- Trigger logic
          count      : in  MatchCounterType; -- Current match counter value
-         equalA     : out std_logic;        -- Comparator output A
-         equalB     : out std_logic;        -- Comparator output B
+         equal1     : out std_logic;        -- Comparator output 1 LUT[15..8]
+         equal0     : out std_logic;        -- Comparator output 0 LUT[7..0]
 
          -- LUT serial configuration: MATCH_COUNTER_BITS/4 LUTs
          lut_clock      : in  std_logic;  -- Used for LUT shift register          
@@ -55,8 +55,8 @@ architecture behavioral of CountMatcherPair is
 constant BITS_PER_LUT : integer := 4;
 constant NUM_LUTS     : integer := MATCH_COUNTER_BITS/BITS_PER_LUT;
 
-signal comparisonA  : std_logic_vector(NUM_LUTS-1 downto 0);
-signal comparisonB  : std_logic_vector(NUM_LUTS-1 downto 0);
+signal comparison0  : std_logic_vector(NUM_LUTS-1 downto 0);
+signal comparison1  : std_logic_vector(NUM_LUTS-1 downto 0);
 signal lut_chainIn  : std_logic_vector(NUM_LUTS-1 downto 0);
 signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
 
@@ -82,17 +82,30 @@ begin
          i1  => count(BITS_PER_LUT*index+1), -- Logic data input
          i0  => count(BITS_PER_LUT*index+0), -- Logic data input
          
-         o5  => comparisonA(index),          -- 4-LUT output
-         o6  => comparisonB(index)           -- 4-LUT output      
+         o5  => comparison0(index),          -- LUT4 output LUT[15..0]
+         o6  => comparison1(index)           -- LUT4 output LUT[31..16]     
       );
    end generate;
    
-   -- Chain LUT shift-registers
-   lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
-   lut_config_out <= lut_chainOut(lut_chainOut'left);
+   SingleLutChainGenerate:
+   if (NUM_LUTS = 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(0);
+      lut_chainIn(0) <= lut_config_in;
+   end generate;
+   
+   MutipleLutChainGenerate:
+   if (NUM_LUTS > 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(lut_chainOut'left);
+      lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
+   end generate;
+   
    
    -- Fold output of comparison bits
-   equalA <= and_reduce(comparisonA);
-   equalB <= and_reduce(comparisonB);
+   equal1 <= and_reduce(comparison1);
+   equal0 <= and_reduce(comparison0);
    
 end Behavioral;

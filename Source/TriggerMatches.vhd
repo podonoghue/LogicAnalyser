@@ -29,18 +29,18 @@ use work.LogicAnalyserPackage.all;
 --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/4                = 16 * 4/4        =  16 LUTs
 --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16                    =  2 * 16/16      =   2 LUT
 --
--- +-------------+-------------+-------------+------------+-------------+-------------+
--- |  Combiner   | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
--- +-------------+-------------+-------------+------------+-------------+-------------+
--- |LUT(272..256)|LUT(255..240)|LUT(239..224)|            | LUT(31..16) |  LUT(15..0) |
--- +-------------+-------------+-------------+------------+-------------+-------------+
---   See                       |             |
---   Combiner      +-----------+             +-------------+
---                 |                                       |
---                 +-------------------+-------------------+
---                 |  TriggerMatcher   |  TriggerMatcher   |  See TriggerMatcher
---                 |   LUT(239..232)   |   LUT(231..224)   |  for detailed mapping (8 LUTs)
---                 +-------------------+-------------------+
+-- +-------------+-------------+------------+-------------+-------------+-------------+
+-- | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |  Combiner   |
+-- +-------------+-------------+------------+-------------+-------------+-------------+
+-- |LUT(272..256)|LUT(255..240)|            | LUT(47..12) | LUT(31..16) |  LUT(15..0) |
+-- +-------------+-------------+------------+-------------+-------------+-------------+
+--               |             |                                          See          
+--   +-----------+             +-------------+                            Combiner     
+--   |                                       |                                         
+--   +-------------------+-------------------+                                         
+--   |  TriggerMatcher   |  TriggerMatcher   |  See TriggerMatcher                               
+--   |   LUT(239..232)   |   LUT(231..224)   |  for detailed mapping                     
+--   +-------------------+-------------------+  (8 LUTs)                            
 --
 --==============================================================================================
 entity TriggerMatches is
@@ -67,43 +67,30 @@ architecture Behavioral of TriggerMatches is
 
 constant COMPARATORS_PER_BLOCK : positive := 2;
 constant NUM_TRIGGER_BLOCKS    : positive := MAX_TRIGGER_CONDITIONS/COMPARATORS_PER_BLOCK;
+constant NUM_LUTS              : integer  := MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS+1;
 
-signal chainIn     : std_logic_vector(MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS-1 downto 0);
-signal chainOut    : std_logic_vector(MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS-1 downto 0);
-signal lut_chain   : std_logic;
+signal lut_chainIn  : std_logic_vector(NUM_LUTS-1 downto 0);
+signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
+signal lut_chain    : std_logic;
 
-signal triggers    : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0);
+signal triggers     : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0);
 
 -- Trigger logic
-signal conditions : TriggerConditionArray;
+signal conditions   : TriggerConditionArray;
 
 begin
    
    trigger <= triggers(triggerStep);
    
-   Combiner_inst:
-   entity work.Combiner
-   port map ( 
-      -- Trigger logic
-      conditions     => conditions,       -- Current sample data
-      triggers       => triggers,         -- Previous sample data
-                                     
-      -- LUT serial configuration (MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS)/4 LUTs)
-      lut_clock      => lut_clock,        -- LUT shift-register clock
-      lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
-      lut_config_in  => lut_chain,        -- Serial configuration data input (MSB first)
-      lut_config_out => lut_config_out    -- Serial configuration data output
-   );
-
-   GenerateComparisons: -- Each trigger step
+   GenerateSteps: -- Each trigger step
    for triggerStep in MAX_TRIGGER_STEPS-1 downto 0 generate
    
    begin
    
-      GenerateTriggers: -- Each LUT for comparator in trigger step
+      GenerateComparisons: -- Each LUT for comparator in trigger step
       for index in NUM_TRIGGER_BLOCKS-1 downto 0 generate
 
-      constant lut_config_index : integer := triggerStep*NUM_TRIGGER_BLOCKS+index;
+      constant lut_config_index : integer := triggerStep*NUM_TRIGGER_BLOCKS+index+1;
 
       begin
          
@@ -120,24 +107,42 @@ begin
             -- LUT serial configuration (NUM_INPUTS/2 LUTs)
             lut_clock      => lut_clock,                  -- Used for LUT shift register          
             lut_config_ce  => lut_config_ce,              -- Clock enable for LUT shift register
-            lut_config_in  => chainIn(lut_config_index),  -- Serial in for LUT shift register (MSB first)
-            lut_config_out => chainOut(lut_config_index)  -- Serial out for LUT shift register
+            lut_config_in  => lut_chainIn(lut_config_index),  -- Serial in for LUT shift register (MSB first)
+            lut_config_out => lut_chainOut(lut_config_index)  -- Serial out for LUT shift register
          );
       end generate;   
    end generate;
 
+   Combiner_inst:
+   entity work.Combiner
+   port map ( 
+      -- Trigger logic
+      conditions     => conditions,       -- Current sample data
+      triggers       => triggers,         -- Previous sample data
+                                     
+      -- LUT serial configuration (MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS)/4 LUTs)
+      lut_clock      => lut_clock,        -- LUT shift-register clock
+      lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
+      lut_config_in  => lut_chainIn(0),   -- Serial configuration data input (MSB first)
+      lut_config_out => lut_chainOut(0)   -- Serial configuration data output
+   );
+
    -- Wire together the LUT configuration shift registers into a single chain
    
-   GenerateLogicSimple:
-   if (MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS = 1) generate
-      chainIn(0)     <= lut_config_in;
-      lut_chain      <= chainOut(0);
+   SingleLutChainGenerate:
+   if (NUM_LUTS = 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(0);
+      lut_chainIn(0) <= lut_config_in;
    end generate;
    
-   GenerateLogicComplex:
-   if (MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS > 1) generate
-      chainIn        <= chainOut(chainOut'left-1 downto 0) & lut_config_in;
-      lut_chain      <= chainOut(chainOut'left);
+   MutipleLutChainGenerate:
+   if (NUM_LUTS > 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(lut_chainOut'left);
+      lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
    end generate;
       
 end Behavioral;

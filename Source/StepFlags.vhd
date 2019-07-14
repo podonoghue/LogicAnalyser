@@ -69,6 +69,7 @@ begin
    
    GenerateLogic: 
    for index in NUM_LUTS-1 downto 0 generate
+   begin
       cfglut5_inst : CFGLUT5           -- For simulation  cfglut5_inst : entity work.CFGLUT5
       generic map (
          init => x"00000000"
@@ -92,8 +93,20 @@ begin
       );
    end generate;
    
-   -- Chain LUT shift-registers
-   lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
-   lut_config_out <= lut_chainOut(lut_chainOut'left);
-      
+   SingleLutChainGenerate:
+   if (NUM_LUTS = 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(0);
+      lut_chainIn(0) <= lut_config_in;
+   end generate;
+   
+   MutipleLutChainGenerate:
+   if (NUM_LUTS > 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(lut_chainOut'left);
+      lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
+   end generate;
+   
 end Behavioral;

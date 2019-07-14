@@ -10,7 +10,7 @@ use work.LogicAnalyserPackage.all;
 -- Implements MAX_TRIGGER_STEPS of MATCH_COUNTER_BITS-wide fixed value comparators
 -- The comparison value is encoded in the LUT
 --=================================================================================
-entity CountMatches is
+entity CountMatchers is
     port ( 
          -- Trigger logic
          count        : in  MatchCounterType;  -- Current match counter value
@@ -24,9 +24,9 @@ entity CountMatches is
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
          lut_config_out : out std_logic   -- Serial out for LUT shift register
    );
-end CountMatches;
+end CountMatchers;
 
-architecture Behavioral of CountMatches is
+architecture Behavioral of CountMatchers is
 
 constant COMPARATORS_PER_BLOCK : positive := 2;
 constant NUM_COMPARATOR_BLOCKS : positive := MAX_TRIGGER_STEPS/COMPARATORS_PER_BLOCK;
@@ -45,9 +45,9 @@ begin
       CountMatcherPair_inst : entity work.CountMatcherPair
       port map (
          -- Logic function
-         count   => count,                                -- Current counter value
-         equalA  => equals(COMPARATORS_PER_BLOCK*index+1), -- Comparison output
-         equalB  => equals(COMPARATORS_PER_BLOCK*index),   -- Comparison output
+         count   => count,                                 -- Current counter value
+         equal1  => equals(COMPARATORS_PER_BLOCK*index+1), -- Comparison output
+         equal0  => equals(COMPARATORS_PER_BLOCK*index),   -- Comparison output
 
          -- LUT serial configuration 
          lut_clock      => lut_clock,       -- Used for LUT shift register          

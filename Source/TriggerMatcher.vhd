@@ -149,11 +149,23 @@ begin
       );
    end generate;
    
-   -- Chain LUT shift-registers
-   lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
-   lut_config_out <= lut_chainOut(lut_chainOut'left);
+   SingleLutChainGenerate:
+   if (NUM_LUTS = 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(0);
+      lut_chainIn(0) <= lut_config_in;
+   end generate;
    
-   -- Fold output of comparison bits
+   MutipleLutChainGenerate:
+   if (NUM_LUTS > 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(lut_chainOut'left);
+      lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
+   end generate;
+   
+   -- Fold together output of comparison bits
    trigger1 <= and_reduce(comparison1);
    trigger0 <= and_reduce(comparison0);
    
