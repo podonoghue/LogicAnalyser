@@ -11,6 +11,8 @@
 #include "hardware.h"
 #include "spi.h"
 
+#include "Lfsr16.h"
+
 #include "EncodeLuts.h"
 
 using namespace Analyser;
@@ -91,7 +93,7 @@ void getConfig(ConfigType &config) {
  * @param[in]     numLuts
  * @param[inout]  luts
  */
-void txRxLuts(unsigned numLuts, uint32_t luts[]) {
+void txRxLuts(uint32_t luts[], unsigned numLuts) {
    Led::high();
    USBDM::waitUS(20);
    Led::low();
@@ -127,7 +129,7 @@ void sendTriggerLuts(
    getTriggerStepPatternMatcherLutValues(trigger, lutValues);
    USBDM::console.write("tx: ");
    printLuts(lutValues, LUTS_PER_TRIGGER_STEP_FOR_PATTERNS);
-   txRxLuts(sizeof(lutValues)/sizeof(lutValues[0]), lutValues);
+   txRxLuts(lutValues, sizeof(lutValues)/sizeof(lutValues[0]));
    //   console.write("rx: ");
    //   printLuts(lutValues, LUTS_PER_TRIGGER_STEP_FOR_PATTERNS);
    USBDM::console.readChar();
@@ -182,12 +184,19 @@ void testIndividualTriggerPattern() {
    }
 }
 
+TriggerStep triggersdontcare[MAX_TRIGGER_STEPS] = {
+      // Pattern 0 Pattern 1      Polarity 0          Polarity 1          Count
+      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And, false, 1},
+      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And, false, 2},
+      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And, false, 3},
+      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And, false, 4},
+};
 
 TriggerStep triggers1[MAX_TRIGGER_STEPS] = {
       // Pattern 0 Pattern 1      Polarity 0          Polarity 1          Count
-      {   "XX",     "XX",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 5},
-      {   "X0",     "X0",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 10},
-      {   "X1",     "X1",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 15},
+      {   "XX",     "XX",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 4},
+      {   "X0",     "X0",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 3},
+      {   "X1",     "X1",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 2},
       {   "XC",     "XC",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 7},
 };
 
@@ -217,12 +226,88 @@ TriggerStep triggers4[MAX_TRIGGER_STEPS] = {
 
 void printTriggers(TriggerSetup triggers) {
    for (unsigned step=0; step<MAX_TRIGGER_STEPS; step++) {
-      USBDM::console.writeln(triggers.triggers[step].toString());
+      USBDM::console.write("  -- ").writeln(triggers.triggers[step].toString());
    }
 }
 
-int main() {
+/**
+ * Print an array of LUTs
+ *
+ * @param lutValues
+ * @param number
+ */
+void printLutsAsVhdlArrayPreamble(unsigned number) {
+   using namespace USBDM;
 
+   console.writeln();
+   console.write("   constant SIM_SAMPLE_WIDTH           : natural := ").write(SAMPLE_WIDTH).writeln(";");
+   console.write("   constant SIM_MAX_TRIGGER_STEPS      : natural := ").write(MAX_TRIGGER_STEPS).writeln(";");
+   console.write("   constant SIM_MAX_TRIGGER_PATTERNS   : natural := ").write(MAX_TRIGGER_PATTERNS).writeln(";");
+   console.write("   constant SIM_NUM_TRIGGER_FLAGS      : natural := ").write(NUM_TRIGGER_FLAGS).writeln(";");
+   console.write("   constant SIM_NUM_MATCH_COUNTER_BITS : natural := ").write(NUM_MATCH_COUNTER_BITS).writeln(";");
+
+   console.writeln();
+   console.write("   type StimulusArray is array (0 to ").write(number-1).writeln(") of StiumulusEntry;");
+   console.writeln("   variable stimulus : StimulusArray := (");
+}
+/**
+ * Print an array of LUTs
+ *
+ * @param lutValues
+ * @param number
+ */
+void printLutsAsVhdlArray(uint32_t lutValues[], unsigned number, const char *title, bool end) {
+   using namespace USBDM;
+
+   console.write("      -- ").writeln(title);
+   console.setPadding(Padding_LeadingZeroes).setWidth(8);
+   for(unsigned index=0; index<number; index++) {
+      console.write("      ( to_unsigned(LUT_SR_ADDRESS, ADDRESS_BUS_WIDTH), ");
+      console.write("\"").write((lutValues[index]>>24)&0xFF, Radix_2).write("\", ");
+      console.write("\"").write((lutValues[index]>>16)&0xFF, Radix_2).write("\", ");
+      console.write("\"").write((lutValues[index]>>8)&0xFF,  Radix_2).write("\", ");
+      console.write("\"").write((lutValues[index]>>0)&0xFF,  Radix_2).write("\" )");
+      if ((index!=(number-1)) || !end) {
+         console.write(",");
+      }
+      console.writeln();
+   }
+   console.resetFormat();
+}
+/**
+ * Print an array of LUTs
+ *
+ * @param lutValues
+ * @param number
+ */
+void printLutsAsVhdlArrayPostamble() {
+   using namespace USBDM;
+   console.writeln("   );");
+}
+
+void printLutsForSimulation() {
+   uint32_t lutValues[TOTAL_TRIGGER_LUTS] = {0};
+
+   TriggerSetup setup = {triggers1, 3};
+
+   printTriggers(setup);
+
+   printLutsAsVhdlArrayPreamble(TOTAL_TRIGGER_LUTS);
+   getTriggerPatternMatcherLutValues(setup,  lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGER_PATTERNS, "PatternMatcher LUT values", false);
+   getTriggerCombinerLutValues(setup, lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGER_COMBINERS, "Combiner LUT values", false);
+   getTriggerCountLutValues(setup, lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGER_COUNTS, "Count LUT values", false);
+   getTriggerFlagLutValues(setup, lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGERS_FLAGS, "Flag LUT values", true);
+   printLutsAsVhdlArrayPostamble();
+
+   for(;;) {
+      __asm__("bkpt");
+   }
+}
+void loadLuts() {
    uint32_t lutValues[TOTAL_TRIGGER_LUTS] = {0};
 
    initHardware();
@@ -231,49 +316,34 @@ int main() {
 
    printTriggers(setup);
 
-   USBDM::console.write("Trigger Counts");
-   getTriggerCountLutValues(setup, lutValues);
-   printLuts(lutValues, LUTS_FOR_TRIGGER_COUNTS);
+   USBDM::console.write("Trigger Counts LUTs");
 
    for(;;) {
       getTriggerPatternMatcherLutValues(setup,  lutValues+START_TRIGGER_PATTERN_LUTS);
       getTriggerCombinerLutValues(setup, lutValues+START_TRIGGER_COMBINER_LUTS);
       getTriggerCountLutValues(setup, lutValues+START_TRIGGER_COUNT_LUTS);
       getTriggerFlagLutValues(setup, lutValues+START_TRIGGER_FLAG_LUTS);
-      txRxLuts(TOTAL_TRIGGER_LUTS, lutValues);
+      printLuts(lutValues, TOTAL_TRIGGER_LUTS);
+      txRxLuts(lutValues, TOTAL_TRIGGER_LUTS);
       USBDM::console.write("Again?");
       USBDM::console.readChar();
    }
-//   uint32_t lutValues[LUTS_FOR_TRIGGER_PATTERNS+LUTS_FOR_TRIGGER_COMBINERS];
-//
-//   initHardware();
-//
-//   USBDM::console.writeln();
-//   TriggerStep *triggers = triggers4;
-//   printTriggers(triggers);
-//   for (;;) {
-//      getTriggerPatternMatcherLutValues(triggers,  lutValues+START_TRIGGER_PATTERN_LUTS);
-//      getTriggerCombinerLutValues(triggers, lutValues+START_TRIGGER_COMBINER_LUTS);
-////      USBDM::console.write("Trigger patterns");
-////      printLuts(lutValues+START_TRIGGER_PATTERN_LUTS,  LUTS_FOR_TRIGGER_PATTERNS);
-////      USBDM::console.write("Trigger Combiners");
-////      printLuts(lutValues+START_TRIGGER_COMBINER_LUTS, LUTS_FOR_TRIGGER_COMBINERS);
-////      USBDM::console.writeln("");
-//      txRxLuts(LUTS_FOR_TRIGGER_PATTERNS+LUTS_FOR_TRIGGER_COMBINERS, lutValues);
-//   }
-//
-//   USBDM::console.writeln(" T1 =>           1100");
-//   USBDM::console.writeln(" T0 =>           1010");
-//   USBDM::console.setWidth(8).setPadding(USBDM::Padding_LeadingZeroes);
-//   USBDM::console.write("!T1 && !T0 0b").writeln(encodeCombination(polarityII, Analyser::And), USBDM::Radix_2);
-//   USBDM::console.write("!T1 &&  T0 0b").writeln(encodeCombination(polarityIN, Analyser::And), USBDM::Radix_2);
-//   USBDM::console.write(" T1 && !T0 0b").writeln(encodeCombination(polarityNI, Analyser::And), USBDM::Radix_2);
-//   USBDM::console.write(" T1 &&  T0 0b").writeln(encodeCombination(polarityNN, Analyser::And), USBDM::Radix_2);
-//   USBDM::console.write("!T1 || !T0 0b").writeln(encodeCombination(polarityII, Analyser::OR),  USBDM::Radix_2);
-//   USBDM::console.write("!T1 ||  T0 0b").writeln(encodeCombination(polarityIN, Analyser::OR),  USBDM::Radix_2);
-//   USBDM::console.write(" T1 || !T0 0b").writeln(encodeCombination(polarityNI, Analyser::OR),  USBDM::Radix_2);
-//   USBDM::console.write(" T1 ||  T0 0b").writeln(encodeCombination(polarityNN, Analyser::OR),  USBDM::Radix_2);
-//   USBDM::console.resetFormat();
+}
+
+void testLfsr16() {
+   USBDM::console.write("Period = ").writeln(Lfsr16::findPeriod());
+
+   USBDM::console.setWidth(4).setPadding(USBDM::Padding_LeadingZeroes);
+   USBDM::console.write("Next(").write(0xACE1, USBDM::Radix_16).write(") => ").writeln(Lfsr16::calcNextValue(0xACE1), USBDM::Radix_16);
+   for (uint32_t value=0; value<=65525; value++) {
+      USBDM::console.write("Encode(").write(value, USBDM::Radix_16).write(") => ").writeln(Lfsr16::encode(value), USBDM::Radix_16);
+   }
+}
+
+int main() {
+
+   printLutsForSimulation();
+
    for(;;) {
       __asm__("bkpt");
    }

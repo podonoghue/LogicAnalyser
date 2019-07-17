@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include "hardware.h"
 #include "stringFormatter.h"
@@ -160,14 +161,13 @@ static constexpr int COMBINERS_PER_LUT = 4;
 
 //================================================================
 // CountMatchers match a count in a trigger step
-// CountMatchers are complicated because each LUT implements
-// 4 bits of 2 separate count matchers with shared inputs
+// Each LUT (shift-register) implements one bit from each of the count comparisons
 
-/// Number of partial CountMatchers implemented in a Comparator LUT
-static constexpr int PARTIAL_COUNT_MATCHERS_PER_LUT = 2;
+// Number of bits in a step trigger counter
+static constexpr int NUM_TRIGGER_COUNTER_BITS   = 16;
 
 /// Number of bits implemented in a CountMatcher LUT
-static constexpr int COUNT_MATCHER_BITS_PER_LUT     = 4;
+static constexpr int COUNT_MATCHERS     = 4;
 
 //====================================================================
 
@@ -177,9 +177,6 @@ static constexpr int NUM_CONFIG_WORDS = 4;
 ///============================================================================================
 /// Number of LUTS per trigger step used for pattern matchers
 static constexpr int LUTS_PER_TRIGGER_STEP_FOR_PATTERNS = (MAX_TRIGGER_PATTERNS*SAMPLE_WIDTH)/(PATTERN_MATCHER_BITS_PER_LUT*PARTIAL_PATTERN_MATCHERS_PER_LUT);
-
-/// Number of LUTS per trigger step used for counter matchers
-static constexpr int LUTS_PER_TRIGGER_STEP_FOR_COUNTS = (NUM_MATCH_COUNTER_BITS)/(COUNT_MATCHER_BITS_PER_LUT*PARTIAL_COUNT_MATCHERS_PER_LUT);
 
 /// Number of LUTS per trigger step used for trigger pattern combiners
 static constexpr int LUTS_PER_TRIGGER_STEP_FOR_COMBINERS = 1;
@@ -191,8 +188,8 @@ static constexpr int LUTS_FOR_CONFIG = 0;//NUM_CONFIG_WORDS/1;
 /// Number of LUTS for triggers used for pattern matchers
 static constexpr int LUTS_FOR_TRIGGER_PATTERNS = MAX_TRIGGER_STEPS*LUTS_PER_TRIGGER_STEP_FOR_PATTERNS;
 
-/// Number of LUTS for triggers used for counter matchers
-static constexpr int LUTS_FOR_TRIGGER_COUNTS = MAX_TRIGGER_STEPS*LUTS_PER_TRIGGER_STEP_FOR_COUNTS;
+/// Number of LUTS for triggers used for counter matchers ( 1 per counter bit)
+static constexpr int LUTS_FOR_TRIGGER_COUNTS = NUM_TRIGGER_COUNTER_BITS;
 
 /// Number of LUTS for trigger combiners for each trigger step
 static constexpr int LUTS_FOR_TRIGGER_COMBINERS = MAX_TRIGGER_STEPS;
@@ -234,8 +231,10 @@ typedef char PinTriggerEncoding;
  * The pattern is encoded as a string of "XHLRFC" values
  */
 struct TriggerPattern {
+private:
    PinTriggerEncoding triggerValue[SAMPLE_WIDTH+1];
 
+public:
    TriggerPattern() {
       memset(triggerValue, 0, SAMPLE_WIDTH+1);
    }
@@ -251,15 +250,20 @@ struct TriggerPattern {
    PinTriggerEncoding operator[](unsigned index) {
       return triggerValue[(SAMPLE_WIDTH-1)-index];
    }
+
+   PinTriggerEncoding getBitEncoding(unsigned bitNum) {
+      assert(bitNum < SAMPLE_WIDTH);
+      return triggerValue[bitNum];
+   }
+   const char *toString() {
+      return triggerValue;
+   }
 };
 
 /**
  * Represents a Step in the trigger sequence
  */
 struct TriggerStep {
-friend void getTriggerStepCombinerLutValues(TriggerStep &trigger, uint32_t lutValues[LUTS_PER_TRIGGER_STEP_FOR_PATTERNS]);
-friend void getTriggerStepPatternMatcherLutValues(TriggerStep &trigger, uint32_t lutValues[LUTS_PER_TRIGGER_STEP_FOR_PATTERNS]);
-friend void getTriggerStepPairCountLutValues(TriggerStep t1, TriggerStep t0, uint32_t lutValues[2*LUTS_PER_TRIGGER_STEP_FOR_COUNTS]);
 
 private:
    TriggerPattern    patterns[MAX_TRIGGER_PATTERNS];
@@ -297,14 +301,32 @@ public:
       sf.clear();
       sf.write(operation.toString()).write(" ");
       for (unsigned triggerNum=0; triggerNum<MAX_TRIGGER_PATTERNS; triggerNum++) {
-         sf.write("T").write(triggerNum).write("[").write(patterns[triggerNum].triggerValue);
+         sf.write("T").write(triggerNum).write("[").write(patterns[triggerNum].toString());
          sf.write(", ").write(polarities[triggerNum].toString()).write("] ");
       }
       sf.write("Count = ").write(triggerCount);
       return sf.toString();
    }
 
-   bool isContiguous() {
+   auto getCount() {
+      return triggerCount;
+   }
+
+   auto getPattern(unsigned patternNum) {
+      assert(patternNum<MAX_TRIGGER_PATTERNS);
+      return patterns[patternNum];
+   }
+
+   auto getPolarities(unsigned patternNum) {
+      assert(patternNum<MAX_TRIGGER_PATTERNS);
+      return polarities[patternNum];
+   }
+
+   auto getOperation() {
+      return operation;
+   }
+
+   auto isContiguous() {
       return contiguous;
    }
 };
@@ -323,7 +345,22 @@ struct TriggerSetup {
       memcpy(this->triggers, triggers, sizeof(this->triggers));
    }
 
+   auto getTrigger(unsigned triggerNum) {
+      return triggers[triggerNum];
+   }
+
+   auto getLastActiveTriggerCount() {
+      return lastActiveTriggerCount;
+   }
 };
+
+/**
+ * Get the LUT values for the pattern matchers in a trigger step
+ *
+ * @param trigger
+ * @param lutValues
+ */
+void getTriggerStepPatternMatcherLutValues(TriggerStep &trigger, uint32_t lutValues[LUTS_PER_TRIGGER_STEP_FOR_PATTERNS]);
 
 /**
  * Get the LUT values for the pattern matchers for all trigger steps

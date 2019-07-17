@@ -7,7 +7,7 @@ use work.all;
 use work.LogicAnalyserPackage.all;
 
 --==============================================================================================
--- Implements MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS of NUM_INPUTS-wide trigger circuits supporting 
+-- Implements MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS of NUM_INPUTS-wide trigger circuits supporting 
 --
 --    High    Low     Rising     Falling     Change
 --    -----              +---   ---+        ---+ +---
@@ -18,16 +18,16 @@ use work.LogicAnalyserPackage.all;
 -- The current trigger is selected by triggerStep.
 --
 -- LUT serial configuration:
---   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
---   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS)/4 LUTs
---   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
+--   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS)/4 LUTs
+--   Flags:       NUM_TRIGGER_FLAGS * MAX_TRIGGER_STEPS/16
 --
--- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_TRIGGER_CONDITIONS=4, NUM_INPUTS=16)
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_TRIGGER_PATTERNS=4, NUM_INPUTS=16)
 --
 -- Number of LUTs:
---   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
---   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/4                = 16 * 4/4        =  16 LUTs
---   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16                    =  2 * 16/16      =   2 LUT
+--   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/4                = 16 * 4/4        =  16 LUTs
+--   Flags:       NUM_TRIGGER_FLAGS * MAX_TRIGGER_STEPS/16                    =  2 * 16/16      =   2 LUT
 -- TODO
 -- +-------------+-------------+-------------+-------------+-------------+------------+-------------+-------------+
 -- |   Flag(1)   |   Flag(0)   |  Combiner   | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
@@ -38,7 +38,7 @@ use work.LogicAnalyserPackage.all;
 --   StepFlags     +-------------------------+             |
 --   and           |                                       |
 --   Combiner      +-------------------+-------------------+
---                 |  TriggerMatcher   |  TriggerMatcher   |  See TriggerMatcher
+--                 |  PatternMatcher   |  PatternMatcher   |  See PatternMatcher
 --                 |   LUT(255..248)   |   LUT(247..240)   |  for detailed mapping (8 LUTs)
 --                 +-------------------+-------------------+
 --
@@ -47,80 +47,108 @@ entity TriggerBlock is
    port ( 
       reset          : in  std_logic;
       clock          : in  std_logic;
-      
+
+      -- Bus interface
+      wr             : in   std_logic;
+      rd             : in   std_logic;
+      addr           : in   AddressBusType;
+      dataIn         : in   DataBusType;
+      dataOut        : out  DataBusType;
+
       -- Trigger logic
       enable         : in  std_logic;
-      lastSample     : in  SampleDataType;
-      currentSample  : in  SampleDataType;
+      currentSample  : in  SampleDataType;  -- Current sample data
+      lastSample     : in  SampleDataType;  -- Previous sample data
       
-      trigger        : out std_logic;      -- Trigger output
+      triggerFound   : out std_logic        -- Trigger output
 
-      -- LUT serial configuration          
-      lut_clock      : in  std_logic;  -- Used for LUT shift register          
-      lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
-      lut_config_in  : in  std_logic;  -- Serial in for LUT shift register MSB first in
-      lut_config_out : out std_logic   -- Serial out for LUT shift register
   );
 end TriggerBlock;
 
-architecture Behavioral of TriggerBlock is
+architecture Structural of TriggerBlock is
 
-type StateType is (s_idle, s_running, s_complete);
-signal state : StateType;
+signal triggerStep       : TriggerRangeType;
+signal matchCount        : MatchCounterType;
 
-signal triggerFound : std_logic;
-
-signal triggerCountEquals : std_logic;
-
-signal matchCounter : MatchCounterType;
+-- Counter equal for current trigger step
+signal triggerCountMatch    : std_logic;
+signal triggerPatternMatch  : std_logic;
 
 signal lut_chain : std_logic;
 
-signal triggerStep  : TriggerRangeType;
-
-constant NUM_FLAGS : integer := 2;
-signal flags : std_logic_vector(NUM_FLAGS-1 downto 0);
+signal flags : std_logic_vector(NUM_TRIGGER_FLAGS-1 downto 0);
 
 alias  contiguousTrigger : std_logic is flags(0);
 alias  lastTriggerStep   : std_logic is flags(1);
 
-signal lut_chainIn  : std_logic_vector(2 downto 0);
-signal lut_chainOut : std_logic_vector(2 downto 0);
+-- Number of modules chained together
+constant NUM_CHAINED_MODULES : integer  := 3;
+signal   lut_chainIn         : std_logic_vector(NUM_CHAINED_MODULES-1 downto 0);
+signal   lut_chainOut        : std_logic_vector(NUM_CHAINED_MODULES-1 downto 0);
+
+-- LUT parallel to serial configuration          
+signal lut_config_ce  : std_logic;  -- Clock enable for LUT shift register
+signal lut_config_in  : std_logic;  -- Serial in for LUT shift register (MSB first)
+signal lut_config_out : std_logic;  -- Serial out for LUT shift register
 
 begin
-   
-   TriggerMatches_inst:
-   entity work.TriggerMatches
+   TriggerBusInterface_inst:
+   entity work.TriggerBusInterface 
+   PORT MAP(
+		reset          => reset,
+		clock          => clock,
+		dataIn         => dataIn ,
+		dataOut        => dataOut,
+		addr           => addr,
+		wr             => wr,
+		rd             => rd,
+		lut_config_ce  => lut_config_ce,
+		lut_config_in  => lut_config_in,
+		lut_config_out => lut_config_out
+	);
+
+--   ConfigData_inst:
+--   entity ConfigData
+--      port map (
+--         reset          => reset,
+--         -- LUT serial configuration          
+--         clock      => clock,      -- Used for LUT shift register          
+--         lut_config_ce  => lut_config_ce,  -- Clock enable for LUT shift register
+--         lut_config_in  => lut_chainIn(0), -- Serial in for LUT shift register MSB first in
+--         lut_config_out => lut_chainOut(0) -- Serial out for LUT shift register
+--      );
+--
+   PatternMatchers_inst:
+   entity work.PatternMatchers
    port map ( 
+      clock          => clock,
+      
       -- Trigger logic
-      currentSample => currentSample,  -- Current sample data
-      lastSample    => lastSample,     -- Previous sample data
-      triggerStep   => triggerStep,    -- Current step in trigger sequence
-
-      trigger       => triggerFound,   -- Trigger found for current step
-
+      currentSample        => currentSample,       -- Current sample data
+      lastSample           => lastSample,          -- Previous sample data
+      triggerStep          => triggerStep,         -- Current step in trigger sequence
+      triggerPatternMatch  => triggerPatternMatch, -- Pattern match output for current trigger step
+      
       -- LUT serial configuration:
-      --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
-      --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS)/4 LUTs
-      lut_clock      => lut_clock,        -- LUT shift-register clock
+      --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
+      --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS)/4 LUTs
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
-      lut_config_in  => lut_chainIn(0),   -- Serial configuration data input (MSB first)
-      lut_config_out => lut_chainOut(0)   -- Serial configuration data output
+      lut_config_in  => lut_chainIn(2),   -- Serial configuration data input (MSB first)
+      lut_config_out => lut_chainOut(2)   -- Serial configuration data output
    );
 
-   CountMatches_inst:
-   entity work.CountMatchers
+   CountMatchers_inst:
+   entity work.CountMatchers_sr
    port map ( 
-      -- Trigger logic
-      count         => matchCounter,         -- Current match counter
-      triggerStep   => triggerStep,          -- Current step in trigger sequence
+      clock              => clock,
+      matchCounter       => matchCount,           -- Current match counter
+      triggerStep        => triggerStep,          -- Current step in trigger sequence
 
-      equal         => triggerCountEquals,   -- Comparator outputs
+      triggerCountMatch  => triggerCountMatch,   -- Trigger count comparator outputs
 
       -- LUT serial configuration:
-      --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
-      --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS)/4 LUTs
-      lut_clock      => lut_clock,        -- LUT shift-register clock
+      --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
+      --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS)/4 LUTs
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chainIn(1),   -- Serial configuration data input (MSB first)
       lut_config_out => lut_chainOut(1)   -- Serial configuration data output
@@ -129,72 +157,52 @@ begin
    StepFlags_inst:
    entity work.StepFlags
    generic map (
-      NUM_FLAGS => NUM_FLAGS
+      NUM_FLAGS => NUM_TRIGGER_FLAGS
    )
    port map ( 
+      clock          => clock,
+      
       -- Trigger logic
-      triggerStep   => triggerStep,          -- Current step in trigger sequence
-      flags         => flags,                -- Comparator outputs
+      triggerStep    => triggerStep,          -- Current step in trigger sequence
+      flags          => flags,                -- Comparator outputs
 
       -- LUT serial configuration 
-      -- MAX_TRIGGER_STEPS * MATCH_COUNTER_BITS/4 x 32 bits = MAX_TRIGGER_CONDITIONS * NUM_INPUTS/2 LUTs
-      lut_clock      => lut_clock,        -- LUT shift-register clock
+      -- MAX_TRIGGER_STEPS * NUM_MATCH_COUNTER_BITS/4 x 32 bits = MAX_TRIGGER_PATTERNS * NUM_INPUTS/2 LUTs
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
-      lut_config_in  => lut_chainIn(2),   -- Serial configuration data input (MSB first)
-      lut_config_out => lut_chainOut(2)   -- Serial configuration data output
+      lut_config_in  => lut_chainIn(0),   -- Serial configuration data input (MSB first)
+      lut_config_out => lut_chainOut(0)   -- Serial configuration data output
    );
 
-   -- Wire LUT shift registers as single chain
-   lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
-   lut_config_out <= lut_chainOut(lut_chainOut'left);
+   SingleLutChainGenerate:
+   if (NUM_CHAINED_MODULES = 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(0);
+      lut_chainIn(0) <= lut_config_in;
+   end generate;
    
-   triggerStateMachine:
-   process(reset, clock, triggerFound, triggerStep) 
+   MutipleLutChainGenerate:
+   if (NUM_CHAINED_MODULES > 1) generate
+   begin
+      -- Chain LUT shift-registers
+      lut_config_out <= lut_chainOut(lut_chainOut'left);
+      lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
+   end generate;
+   
+	TriggerStateMachine_inst:
+   entity work.TriggerStateMachine 
+   port map (
+		clock                   => clock,
+		reset                   => reset,
+		enable                  => enable,
+      triggerCountMatch       => triggerCountMatch,
+      triggerPatternMatch     => triggerPatternMatch,
+		lastTriggerStep         => lastTriggerStep,
+		contiguousTrigger       => contiguousTrigger,
+		matchCount              => matchCount,
+		triggerStep             => triggerStep,
+		triggerFound            => triggerFound
+	);
 
-   begin      
-       
-      if (reset = '1') then
-         state       <= s_idle;
-         triggerStep <= 0;
-         trigger     <= '0';
-      elsif rising_edge(clock) then
-         case (state) is
-            when s_idle =>
-               triggerStep  <= 0;
-               trigger      <= '0';
-               matchCounter <= (others => '0');
-               if (enable = '1') then
-                  state <= s_running;
-               end if;
-            when s_running =>
-               if (enable = '0') then
-                  state <= s_idle;
-               end if;
-               if (triggerFound = '1') then
-                  matchCounter <= matchCounter + 1;
-                  if (triggerCountEquals = '1') then                     
-                     if (lastTriggerStep = '1') then
-                        trigger <= '1';
-                        state   <= s_complete;
-                     else
-                        triggerStep  <= triggerStep + 1;
-                        matchCounter <= (others => '0');
-                     end if;
-                  end if;
-               else
-                  if (contiguousTrigger = '1') then
-                     -- Counter reset on break in matches
-                     matchCounter <= (others => '0');
-                  end if;
-               end if;
-            when s_complete =>
-               trigger <= '0';
-               if (enable = '0') then
-                  state <= s_idle;
-               end if;
-         end case;
-      end if;
-   end process;
-
-end Behavioral;
+end Structural;
 

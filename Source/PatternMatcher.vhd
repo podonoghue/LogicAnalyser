@@ -46,32 +46,37 @@ use unisim.vcomponents.all;
 --
 --======================================================================================
 
-entity TriggerMatcher is
-    port ( 
-         -- Trigger logic
-         currentSample  : in  SampleDataType; -- Current currentSample data
-         lastSample     : in  SampleDataType; -- Previous currentSample data
-         trigger1       : out std_logic;      -- Trigger output 1
-         trigger0       : out std_logic;      -- Trigger output 0
+entity PatternMatcher is
+   port ( 
+      clock          : in  std_logic; 
+      
+      -- Trigger logic
+      currentSample  : in  SampleDataType;    -- Current sample data
+      lastSample     : in  SampleDataType;    -- Previous sample data
+      trigger1       : out std_logic;      -- Trigger output 1
+      trigger0       : out std_logic;      -- Trigger output 0
 
-         -- LUT serial configuration: NUM_INPUTS/2 LUTs
-         lut_clock      : in  std_logic;  -- Used for LUT shift register          
-         lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
-         lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
-         lut_config_out : out std_logic   -- Serial out for LUT shift register
+      -- LUT serial configuration
+      -- NUM_INPUTS/2 LUTs
+      lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
+      lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
+      lut_config_out : out std_logic   -- Serial out for LUT shift register
    );
-end TriggerMatcher;
+end PatternMatcher;
 
-architecture behavioral of TriggerMatcher is
+architecture behavioral of PatternMatcher is
 
 -- Each LUT implements a 2-bit trigger detector
 constant BITS_PER_LUT : integer := 2;
 constant NUM_LUTS     : integer := SAMPLE_WIDTH/BITS_PER_LUT;
 
-signal comparison1  : std_logic_vector(NUM_LUTS-1 downto 0);
-signal comparison0  : std_logic_vector(NUM_LUTS-1 downto 0);
-signal lut_chainIn  : std_logic_vector(NUM_LUTS-1 downto 0);
-signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
+signal   comparison1  : std_logic_vector(NUM_LUTS-1 downto 0);
+signal   comparison0  : std_logic_vector(NUM_LUTS-1 downto 0);
+
+-- Number of modules chained together
+constant NUM_CHAINED_MODULES : integer := NUM_LUTS;
+signal   lut_chainIn         : std_logic_vector(NUM_CHAINED_MODULES-1 downto 0);
+signal   lut_chainOut        : std_logic_vector(NUM_CHAINED_MODULES-1 downto 0);
 
 -- LUT value for detecting given condition on a 2-bit input
 -- X=Don't care, 
@@ -123,13 +128,13 @@ begin
 
    GenerateLogic: 
    for index in NUM_LUTS-1 downto 0 generate
-      cfglut5_inst : CFGLUT5           -- For simulation  cfglut5_inst : entity work.CFGLUT5
+      cfglut5_inst : CFGLUT5
       generic map (
          init => x"00000000"
       )
       port map (
          -- Reconfigure shift register
-         clk => lut_clock,             -- LUT shift-register clock
+         clk => clock,                 -- LUT shift-register clock
          ce  => lut_config_ce,         -- LUT shift-register clock enable
          cdi => lut_chainIn(index),    -- Serial configuration data input (MSB first)
          cdo => lut_chainOut(index),   -- Serial configuration data output
@@ -149,8 +154,12 @@ begin
       );
    end generate;
    
+   -- Fold together output of comparison bits
+   trigger1 <= and_reduce(comparison1);
+   trigger0 <= and_reduce(comparison0);
+   
    SingleLutChainGenerate:
-   if (NUM_LUTS = 1) generate
+   if (NUM_CHAINED_MODULES = 1) generate
    begin
       -- Chain LUT shift-registers
       lut_config_out <= lut_chainOut(0);
@@ -158,15 +167,11 @@ begin
    end generate;
    
    MutipleLutChainGenerate:
-   if (NUM_LUTS > 1) generate
+   if (NUM_CHAINED_MODULES > 1) generate
    begin
       -- Chain LUT shift-registers
       lut_config_out <= lut_chainOut(lut_chainOut'left);
       lut_chainIn    <= lut_chainOut(lut_chainOut'left-1 downto 0) & lut_config_in;
    end generate;
-   
-   -- Fold together output of comparison bits
-   trigger1 <= and_reduce(comparison1);
-   trigger0 <= and_reduce(comparison0);
    
 end Behavioral;

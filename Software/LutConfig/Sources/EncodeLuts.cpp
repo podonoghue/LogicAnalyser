@@ -6,8 +6,11 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include "hardware.h"
 
 #include "EncodeLuts.h"
+
+#include "Lfsr16.h"
 
 namespace Analyser {
 
@@ -97,12 +100,12 @@ void getTriggerStepPatternMatcherLutValues(TriggerStep &trigger, uint32_t lutVal
       for(int condition=MAX_TRIGGER_PATTERNS-1; condition>=PARTIAL_PATTERN_MATCHERS_PER_LUT-1; condition-=PARTIAL_PATTERN_MATCHERS_PER_LUT) {
          uint32_t value = 0;
          value  = getPatternMatchHalfLutValues(
-               trigger.patterns[condition][bitNum],
-               trigger.patterns[condition][bitNum-1]);
+               trigger.getPattern(condition)[bitNum],
+               trigger.getPattern(condition)[bitNum-1]);
          value <<= 16;
          value |= getPatternMatchHalfLutValues(
-               trigger.patterns[condition-1][bitNum],
-               trigger.patterns[condition-1][bitNum-1]);
+               trigger.getPattern(condition-1)[bitNum],
+               trigger.getPattern(condition-1)[bitNum-1]);
          lutValues[lutIndex++] = value;
       }
    }
@@ -133,14 +136,14 @@ void getTriggerStepCombinerLutValues(TriggerStep &trigger, uint32_t lutValues[LU
 
    for (unsigned value=0; value<(1<<MAX_TRIGGER_PATTERNS); value++) {
       bool bitValue;
-      switch(trigger.operation) {
+      switch(trigger.getOperation()) {
          case Operation::And: bitValue = 1; break;
          case Operation::Or:  bitValue = 0; break;
       }
-      for (unsigned bitNum=0; bitNum<MAX_TRIGGER_PATTERNS; bitNum++) {
-         bool term = (value&(1<<bitNum));
-         term = trigger.polarities[bitNum](term, trigger.operation);
-         switch(trigger.operation) {
+      for (unsigned patternNum=0; patternNum<MAX_TRIGGER_PATTERNS; patternNum++) {
+         bool term = (value&(1<<patternNum));
+         term = trigger.getPolarities(patternNum)(term, trigger.getOperation());
+         switch(trigger.getOperation()) {
             case Operation::And: bitValue = bitValue && term; break;
             case Operation::Or:  bitValue = bitValue || term; break;
          }
@@ -164,30 +167,45 @@ void getTriggerCombinerLutValues(TriggerSetup setup, uint32_t lutValues[LUTS_FOR
    }
 }
 
-/**
- * Does two steps at a time because of interleaved values in LUTs
- *
- * @param t1
- * @param t0
- * @param lutValues
- */
-void getTriggerStepPairCountLutValues(TriggerStep t1, TriggerStep t0, uint32_t lutValues[2*LUTS_PER_TRIGGER_STEP_FOR_COUNTS]) {
-   static constexpr unsigned BIT_MASK = (1U<<COUNT_MATCHER_BITS_PER_LUT)-1;
-   unsigned lutIndex=0;
-
-   for (unsigned bits=NUM_MATCH_COUNTER_BITS; bits>=COUNT_MATCHER_BITS_PER_LUT; bits -= COUNT_MATCHER_BITS_PER_LUT) {
-      unsigned partial1, partial0;
-      partial1 = t1.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT);
-      partial0 = t0.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT);
-      partial1 = partial1&BIT_MASK;
-      partial0 = partial0&BIT_MASK;
-      partial1 = 1U<<partial1;
-      partial0 = 1U<<partial0;
-//      partial1 = 1U<<((t1.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT))&BIT_MASK);
-//      partial0 = 1U<<((t0.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT))&BIT_MASK);
-      lutValues[lutIndex++] = (partial1<<16)|partial0;
-   }
-}
+///**
+// * Does two steps at a time because of interleaved values in LUTs
+// *
+// * @param t1
+// * @param t0
+// * @param lutValues
+// */
+//void getTriggerStepPairCountLutValues(TriggerStep t1, TriggerStep t0, uint32_t lutValues[2*LUTS_PER_TRIGGER_STEP_FOR_COUNTS]) {
+//   static constexpr unsigned BIT_MASK = (1U<<COUNT_MATCHER_BITS_PER_LUT)-1;
+//   unsigned lutIndex=0;
+//
+//   for (unsigned bits=NUM_MATCH_COUNTER_BITS; bits>=COUNT_MATCHER_BITS_PER_LUT; bits -= COUNT_MATCHER_BITS_PER_LUT) {
+//      unsigned partial1, partial0;
+//      partial1 = t1.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT);
+//      partial0 = t0.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT);
+//      partial1 = partial1&BIT_MASK;
+//      partial0 = partial0&BIT_MASK;
+//      partial1 = 1U<<partial1;
+//      partial0 = 1U<<partial0;
+////      partial1 = 1U<<((t1.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT))&BIT_MASK);
+////      partial0 = 1U<<((t0.triggerCount>>(bits-COUNT_MATCHER_BITS_PER_LUT))&BIT_MASK);
+//      lutValues[lutIndex++] = (partial1<<16)|partial0;
+//   }
+//}
+//
+///**
+// * Get the LUT values for the trigger count comparators for all trigger steps
+// *
+// * @param trigger
+// * @param lutValues
+// */
+//void getTriggerCountLutValues(TriggerSetup setup, uint32_t lutValues[LUTS_FOR_TRIGGER_COUNTS]) {
+//   unsigned lutIndex = 0;
+//   // Process the Triggers in pairs
+//   for(int step=MAX_TRIGGER_STEPS-1; step >= 1; step-=2 ) {
+//      getTriggerStepPairCountLutValues(setup.triggers[step], setup.triggers[step-1],  lutValues+lutIndex);
+//      lutIndex += 2*LUTS_PER_TRIGGER_STEP_FOR_COUNTS;
+//   }
+//}
 
 /**
  * Get the LUT values for the trigger count comparators for all trigger steps
@@ -196,11 +214,20 @@ void getTriggerStepPairCountLutValues(TriggerStep t1, TriggerStep t0, uint32_t l
  * @param lutValues
  */
 void getTriggerCountLutValues(TriggerSetup setup, uint32_t lutValues[LUTS_FOR_TRIGGER_COUNTS]) {
-   unsigned lutIndex = 0;
-   // Process the Triggers in pairs
-   for(int step=MAX_TRIGGER_STEPS-1; step >= 1; step-=2 ) {
-      getTriggerStepPairCountLutValues(setup.triggers[step], setup.triggers[step-1],  lutValues+lutIndex);
-      lutIndex += 2*LUTS_PER_TRIGGER_STEP_FOR_COUNTS;
+
+   // Clear LUTs initially
+   for(int index=0; index<LUTS_FOR_TRIGGER_COUNTS; index++) {
+      lutValues[index] = 0;
+   }
+   // Shuffle Trigger values for LUTS
+   // This is basically a transpose
+   for(int step=0; step < MAX_TRIGGER_STEPS; step++ ) {
+      // The bits for each step appear at the this location in the SR
+      uint32_t bitmask = 1<<step;
+      uint32_t count   = Lfsr16::encode(setup.getTrigger(step).getCount());
+      for(int bit=0; bit<NUM_MATCH_COUNTER_BITS; bit++ ) {
+          lutValues[(NUM_MATCH_COUNTER_BITS-1)-bit] |= (count&(1<<bit))?bitmask:0;
+      }
    }
 }
 
@@ -219,8 +246,8 @@ void getTriggerFlagLutValues(TriggerSetup setup, uint32_t lutValues[LUTS_FOR_TRI
          flags |= (1<<step);
       }
    }
-   lutValues[lutIndex++] = flags;
    lutValues[lutIndex++] = (1<<setup.lastActiveTriggerCount);
+   lutValues[lutIndex++] = flags;
 }
 
 /**
@@ -230,32 +257,36 @@ void getTriggerFlagLutValues(TriggerSetup setup, uint32_t lutValues[LUTS_FOR_TRI
  * @param number
  */
 void printLuts(uint32_t lutValues[], unsigned number) {
+   using namespace USBDM;
+
    bool doOpen = true;
    unsigned printNum = 0;
    if (number>LUTS_PER_TRIGGER_STEP_FOR_PATTERNS) {
-      printf("\n");
+      console.write("\n");
    }
    for(unsigned index=0; index<number; index++) {
       if (doOpen) {
-         printf("[");
+         console.write("[");
          doOpen = false;
       }
-      printf("%2X:0x%08lX", index, lutValues[index]);
+      console.setPadding(Padding_LeadingZeroes).
+            setWidth(2).write(index, Radix_16).write(":0x").setWidth(32).write(lutValues[index], Radix_2);
       if (++printNum == LUTS_PER_TRIGGER_STEP_FOR_PATTERNS) {
          printNum = 0;
-         printf("]\n");
+         console.write("]\n");
          doOpen = true;
       }
 //      else if ((printNum % LUTS_PER_COMPARATOR) ==0) {
-//         printf("|");
+//         USBDM::console.write("|");
 //      }
       else {
-         printf(", ");
+         console.write(", ");
       }
    }
    if (printNum != 0) {
-      printf("]\n");
+      console.write("]\n");
    }
+   console.resetFormat();
 }
 
 /*
@@ -291,7 +322,7 @@ void testTriggerToLuts(
          false,
          100,
    };
-   printf("Tb='%16s', Ta='%16s' => ", triggerB, triggerA);
+   USBDM::console.write("Tb='").write(triggerB).write("', Ta='").write(triggerA).write("' => ");
    getTriggerStepPatternMatcherLutValues(trigger, lutValues);
    printLuts(lutValues, LUTS_PER_TRIGGER_STEP_FOR_PATTERNS);
 }
@@ -322,28 +353,28 @@ void testTrigger() {
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXX1", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXX0", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXX0", lutValues);
-   printf("\n");
+   USBDM::console.writeln();
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXH", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXL", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXR", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXF", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXC", "XXXXXXXXXXXXXXXX", lutValues);
-   printf("\n");
+   USBDM::console.writeln();
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXHX", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXLX", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXRX", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXFX", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXCX", "XXXXXXXXXXXXXXXX", lutValues);
-   printf("\n");
+   USBDM::console.writeln();
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXH", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXL", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXR", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXF", "XXXXXXXXXXXXXXXX", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXC", "XXXXXXXXXXXXXXXX", lutValues);
-   printf("\n");
+   USBDM::console.writeln();
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXX0", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXX0X", lutValues);
    testTriggerToLuts("XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXX0XX", lutValues);

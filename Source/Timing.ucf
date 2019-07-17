@@ -1,0 +1,39 @@
+
+
+NET "clock_32MHz" TNM_NET = clock_32MHz;
+TIMESPEC TS_clock_32MHz = PERIOD "clock_32MHz" 32 MHz HIGH 50%;
+
+#Created by Constraints Editor (xc6slx9-tqg144-2) - 2019/07/15
+NET "clock_32MHz" LOC = P94 |IOSTANDARD = "LVTTL";               # CLK
+
+#Created by Constraints Editor (xc6slx9-tqg144-2) - 2019/07/17
+#INST "addrFF_0" IOB = TRUE;
+#INST "addrFF_1" IOB = TRUE;
+#INST "addrFF_2" IOB = TRUE;
+#INST "dataInFF_0" IOB = TRUE;
+#INST "dataInFF_1" IOB = TRUE;
+#INST "dataInFF_2" IOB = TRUE;
+#INST "dataInFF_3" IOB = TRUE;
+#INST "dataInFF_4" IOB = TRUE;
+#INST "dataInFF_5" IOB = TRUE;
+#INST "dataInFF_6" IOB = TRUE;
+#INST "dataInFF_7" IOB = TRUE;
+#INST "enableFF" IOB = TRUE;
+#INST "rdFF" IOB = TRUE;
+#INST "sampleFF_0" IOB = TRUE;
+#INST "sampleFF_1" IOB = TRUE;
+#INST "sampleFF_2" IOB = TRUE;
+#INST "sampleFF_3" IOB = TRUE;
+#INST "sampleFF_4" IOB = TRUE;
+#INST "sampleFF_5" IOB = TRUE;
+#INST "sampleFF_6" IOB = TRUE;
+#INST "sampleFF_7" IOB = TRUE;
+#INST "sampleFF_8" IOB = TRUE;
+#INST "sampleFF_9" IOB = TRUE;
+#INST "sampleFF_10" IOB = TRUE;
+#INST "sampleFF_11" IOB = TRUE;
+#INST "sampleFF_12" IOB = TRUE;
+#INST "sampleFF_13" IOB = TRUE;
+#INST "sampleFF_14" IOB = TRUE;
+#INST "sampleFF_15" IOB = TRUE;
+#INST "wrFF" IOB = TRUE;

@@ -7,7 +7,7 @@ use work.all;
 use work.LogicAnalyserPackage.all;
 
 --==============================================================================================
--- Implements MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS of NUM_INPUTS-wide trigger circuits supporting 
+-- Implements MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS of NUM_INPUTS-wide trigger circuits supporting 
 --
 --    High    Low     Rising     Falling     Change
 --    -----              +---   ---+        ---+ +---
@@ -18,15 +18,15 @@ use work.LogicAnalyserPackage.all;
 -- The current trigger is selected by triggerStep.
 --
 -- LUT serial configuration:
---   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
---   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS)/4 LUTs
+--   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS)/4 LUTs
 --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
 --
--- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_TRIGGER_CONDITIONS=4, NUM_INPUTS=16)
+-- Example LUT bit mapping in LUT chain(MAX_TRIGGER_STEPS=16, MAX_TRIGGER_PATTERNS=4, NUM_INPUTS=16)
 --
 -- Number of LUTs:
---   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
---   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/4                = 16 * 4/4        =  16 LUTs
+--   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
+--   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/4                = 16 * 4/4        =  16 LUTs
 --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16                    =  2 * 16/16      =   2 LUT
 --
 -- +-------------+-------------+------------+-------------+-------------+-------------+
@@ -38,49 +38,56 @@ use work.LogicAnalyserPackage.all;
 --   +-----------+             +-------------+                            Combiner     
 --   |                                       |                                         
 --   +-------------------+-------------------+                                         
---   |  TriggerMatcher   |  TriggerMatcher   |  See TriggerMatcher                               
+--   |  PatternMatcher   |  PatternMatcher   |  See PatternMatcher                               
 --   |   LUT(239..232)   |   LUT(231..224)   |  for detailed mapping                     
 --   +-------------------+-------------------+  (8 LUTs)                            
 --
 --==============================================================================================
-entity TriggerMatches is
-    port ( 
-         -- Trigger logic
-         currentSample : in  SampleDataType;    -- Current sample data
-         lastSample    : in  SampleDataType;    -- Previous sample data
-         triggerStep   : in  TriggerRangeType;  -- Current match counter value
+entity PatternMatchers is
+   port ( 
+      clock          : in  std_logic;
 
-         trigger       : out std_logic;         -- Trigger output for current trigger step
-                                    
-         -- LUT serial configuration 
-         --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_CONDITIONS/2 * NUM_INPUTS/2 LUTs
-         --   Combiner:    MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS/4 LUTs
-         --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
-         lut_clock      : in  std_logic;  -- Used for LUT shift register          
-         lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
-         lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
-         lut_config_out : out std_logic   -- Serial out for LUT shift register
+      -- Sample values
+      currentSample  : in  SampleDataType;    -- Current sample data
+      lastSample     : in  SampleDataType;    -- Previous sample data
+      
+      -- Which step in trigger sequence
+      triggerStep    : in  TriggerRangeType;
+
+      -- Pattern match output for current trigger step
+      triggerPatternMatch : out std_logic; 
+                                 
+      -- LUT serial configuration 
+      --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
+      --   Combiner:    MAX_TRIGGER_STEPS*MAX_TRIGGER_PATTERNS/4 LUTs
+      --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
+      lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
+      lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
+      lut_config_out : out std_logic   -- Serial out for LUT shift register
    );
-end TriggerMatches;
+end PatternMatchers;
 
-architecture Behavioral of TriggerMatches is
+architecture Behavioral of PatternMatchers is
 
 constant COMPARATORS_PER_BLOCK : positive := 2;
-constant NUM_TRIGGER_BLOCKS    : positive := MAX_TRIGGER_CONDITIONS/COMPARATORS_PER_BLOCK;
-constant NUM_LUTS              : integer  := MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS+1;
+constant NUM_TRIGGER_BLOCKS    : positive := MAX_TRIGGER_PATTERNS/COMPARATORS_PER_BLOCK;
 
-signal lut_chainIn  : std_logic_vector(NUM_LUTS-1 downto 0);
-signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
-signal lut_chain    : std_logic;
-
+-- Trigger outputs for each step 
 signal triggers     : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0);
 
--- Trigger logic
+-- All pattern match values across all steps
 signal conditions   : TriggerConditionArray;
+signal conditionFFs : TriggerConditionArray;
+
+-- Number of modules chained together
+constant NUM_CHAINED_MODULES   : integer := MAX_TRIGGER_STEPS*NUM_TRIGGER_BLOCKS+1;
+signal   lut_chainIn           : std_logic_vector(NUM_CHAINED_MODULES-1 downto 0);
+signal   lut_chainOut          : std_logic_vector(NUM_CHAINED_MODULES-1 downto 0);
 
 begin
    
-   trigger <= triggers(triggerStep);
+   -- Pipeline registers
+   triggerPatternMatch <= triggers(to_integer(triggerStep)) when rising_edge(clock);
    
    GenerateSteps: -- Each trigger step
    for triggerStep in MAX_TRIGGER_STEPS-1 downto 0 generate
@@ -89,48 +96,51 @@ begin
    
       GenerateComparisons: -- Each LUT for comparator in trigger step
       for index in NUM_TRIGGER_BLOCKS-1 downto 0 generate
-
+      
+      -- Index into LUT chain
       constant lut_config_index : integer := triggerStep*NUM_TRIGGER_BLOCKS+index+1;
 
       begin
          
-         TriggerMatcher_inst : entity work.TriggerMatcher
-
+         PatternMatcher_inst : entity work.PatternMatcher
          port map (
-            -- Logic function
-            currentSample => currentSample,       -- Current sample data
-            lastSample    => lastSample,          -- Prevous sample data
+            clock          => clock,
             
-            trigger1      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index+1),  -- Comparison output
-            trigger0      => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index),    -- Comparison output
+            -- Logic function
+            currentSample  => currentSample,       -- Current sample data
+            lastSample     => lastSample,          -- Prevous sample data
+            
+            trigger1       => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index+1),  -- Comparison output
+            trigger0       => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index),    -- Comparison output
 
             -- LUT serial configuration (NUM_INPUTS/2 LUTs)
-            lut_clock      => lut_clock,                  -- Used for LUT shift register          
-            lut_config_ce  => lut_config_ce,              -- Clock enable for LUT shift register
+            lut_config_ce  => lut_config_ce,                  -- Clock enable for LUT shift register
             lut_config_in  => lut_chainIn(lut_config_index),  -- Serial in for LUT shift register (MSB first)
             lut_config_out => lut_chainOut(lut_config_index)  -- Serial out for LUT shift register
          );
       end generate;   
    end generate;
-
-   Combiner_inst:
-   entity work.Combiner
+ 
+   -- Pipeline the triggers values before combining them
+   conditionFFs <= conditions when rising_edge(clock);
+   
+   PatternCombiner_inst:
+   entity work.PatternCombiner
    port map ( 
+      clock          => clock,
+
       -- Trigger logic
-      conditions     => conditions,       -- Current sample data
-      triggers       => triggers,         -- Previous sample data
+      conditions     => conditionFFs,     -- All pattern match values across all steps
+      triggers       => triggers,         -- Trigger outputs for each step 
                                      
-      -- LUT serial configuration (MAX_TRIGGER_STEPS*MAX_TRIGGER_CONDITIONS)/4 LUTs)
-      lut_clock      => lut_clock,        -- LUT shift-register clock
+      -- LUT serial configuration (MAX_TRIGGER_STEPS*MAX_TRIGGER_PATTERNS)/4 LUTs)
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chainIn(0),   -- Serial configuration data input (MSB first)
       lut_config_out => lut_chainOut(0)   -- Serial configuration data output
    );
 
-   -- Wire together the LUT configuration shift registers into a single chain
-   
    SingleLutChainGenerate:
-   if (NUM_LUTS = 1) generate
+   if (NUM_CHAINED_MODULES = 1) generate
    begin
       -- Chain LUT shift-registers
       lut_config_out <= lut_chainOut(0);
@@ -138,7 +148,7 @@ begin
    end generate;
    
    MutipleLutChainGenerate:
-   if (NUM_LUTS > 1) generate
+   if (NUM_CHAINED_MODULES > 1) generate
    begin
       -- Chain LUT shift-registers
       lut_config_out <= lut_chainOut(lut_chainOut'left);

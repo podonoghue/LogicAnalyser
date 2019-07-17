@@ -58,7 +58,7 @@ architecture Behavioral of ConfigData is
    -- Configuration information for readout
    constant configInfo : ConfigInformation := (
       CONFIG_KEY,
-      ints_to_config_word(SAMPLE_WIDTH, MAX_TRIGGER_STEPS, MAX_TRIGGER_CONDITIONS, MATCH_COUNTER_BITS),
+      ints_to_config_word(SAMPLE_WIDTH, MAX_TRIGGER_STEPS, MAX_TRIGGER_PATTERNS, NUM_MATCH_COUNTER_BITS),
       others=>x"00000000"
    );
 

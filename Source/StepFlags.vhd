@@ -41,14 +41,15 @@ entity StepFlags is
          NUM_FLAGS : integer := 2
     );
     port ( 
-         -- Current match counter value
+         clock          : in  std_logic; 
+         
+         -- Current step in trigger sequence
          triggerStep    : in  TriggerRangeType; 
          
          -- Flag values
          flags          : out std_logic_vector(NUM_FLAGS-1 downto 0);        
 
          -- LUT serial configuration NUM_LUTS x 32 bits = NUM_LUTS LUTs
-         lut_clock      : in  std_logic;  -- Used for LUT shift register          
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
          lut_config_out : out std_logic   -- Serial out for LUT shift register
@@ -61,32 +62,29 @@ constant NUM_LUTS   : integer := NUM_FLAGS;
 
 signal lut_chainIn  : std_logic_vector(NUM_LUTS-1 downto 0);
 signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
-signal stepValue    : unsigned(4 downto 0); 
 
 begin
 
-   stepValue <= to_unsigned(triggerStep, stepValue'length);
-   
    GenerateLogic: 
    for index in NUM_LUTS-1 downto 0 generate
    begin
-      cfglut5_inst : CFGLUT5           -- For simulation  cfglut5_inst : entity work.CFGLUT5
+      cfglut5_inst : CFGLUT5           -- For simulation  cfglut5_inst : entity CFGLUT5
       generic map (
          init => x"00000000"
       )
       port map (
          -- Reconfigure shift register
-         clk => lut_clock,             -- LUT shift-register clock
+         clk => clock,                 -- LUT shift-register clock
          ce  => lut_config_ce,         -- LUT shift-register clock enable
          cdi => lut_chainIn(index),    -- Serial configuration data input (MSB first)
          cdo => lut_chainOut(index),   -- Serial configuration data output
          
          -- Logic function inputs
-         i4  => stepValue(4), -- Logic data input 
-         i3  => stepValue(3), -- Logic data input
-         i2  => stepValue(2), -- Logic data input
-         i1  => stepValue(1), -- Logic data input
-         i0  => stepValue(0), -- Logic data input
+         i4  => '0',            -- Logic data input 
+         i3  => triggerStep(3), -- Logic data input
+         i2  => triggerStep(2), -- Logic data input
+         i1  => triggerStep(1), -- Logic data input
+         i0  => triggerStep(0), -- Logic data input
          
          o5  => open,           -- Not used
          o6  => flags(index)    -- 5-LUT output      
