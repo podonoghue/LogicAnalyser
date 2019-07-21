@@ -50,11 +50,11 @@ entity TriggerBlock is
 
       -- Bus interface
       wr             : in   std_logic;
-      rd             : in   std_logic;
-      addr           : in   AddressBusType;
       dataIn         : in   DataBusType;
-      dataOut        : out  DataBusType;
 
+      rd             : in   std_logic;
+      dataOut        : out  DataBusType;
+      
       -- Trigger logic
       enable         : in  std_logic;
       currentSample  : in  SampleDataType;  -- Current sample data
@@ -78,8 +78,8 @@ signal lut_chain : std_logic;
 
 signal flags : std_logic_vector(NUM_TRIGGER_FLAGS-1 downto 0);
 
-alias  contiguousTrigger : std_logic is flags(0);
-alias  lastTriggerStep   : std_logic is flags(1);
+alias  contiguousTrigger : std_logic is flags(CONTIGUOUS_TRIGGER_INDEX);
+alias  lastTriggerStep   : std_logic is flags(TRIGGER_SEQUENCE_COMPLETE_INDEX);
 
 -- Number of modules chained together
 constant NUM_CHAINED_MODULES : integer  := 3;
@@ -97,11 +97,15 @@ begin
    PORT MAP(
 		reset          => reset,
 		clock          => clock,
+
 		dataIn         => dataIn ,
-		dataOut        => dataOut,
-		addr           => addr,
 		wr             => wr,
+
+		dataOut        => dataOut,
 		rd             => rd,
+
+      busy           => open,
+
 		lut_config_ce  => lut_config_ce,
 		lut_config_in  => lut_config_in,
 		lut_config_out => lut_config_out

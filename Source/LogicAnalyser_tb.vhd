@@ -11,20 +11,27 @@ END entity;
 ARCHITECTURE behavior OF LogicAnalyser_tb IS 
  
    --Inputs
-   signal reset   : std_logic             := '0';
-   signal clock   : std_logic             := '0';
-   signal dataIn  : DataBusType           := (others => '0');
-   signal dataOut : DataBusType           := (others => '0');
-   signal wr      : std_logic             := '0';
-   signal rd      : std_logic             := '0';
-   signal addr    : AddressBusType        := (others => '0');
-   
-   signal enable         : std_logic      := '0';
-   signal sample         : SampleDataType := (others => '0'); -- Sample data
+   signal reset            : std_logic       := '0';
+   signal clock_100MHz     : std_logic       := '0';
+   signal clock_100MHz_n   : std_logic       := '0';
+   signal clock_200MHz     : std_logic       := '0';
+                                             
+	-- FT2232H Interface                      
+   signal ft2232h_rxf_n    : std_logic       := '1';
+   signal ft2232h_txe_n    : std_logic       := '1';
+   signal ft2232h_rd_n     : std_logic       := '0';
+   signal ft2232h_wr       : std_logic       := '0';
+   signal ft2232h_data     : DataBusType     := (others => 'Z');
+
+   signal enable           : std_logic       := '0';
+   signal sample           : SampleDataType  := (others => '0');   
    
    -- Clock period definitions
-   constant clock_period : time           := 10 ns;
-   signal   complete     : boolean        := false;
+   constant clock_period  : time             := 5 ns;
+   signal   complete      : boolean          := false;
+
+   signal write_data      : DataBusType      := (others => '0');
+   signal write_data_req  : std_logic        := '0';
 
 BEGIN
  
@@ -32,26 +39,56 @@ BEGIN
    LogicAnalyser_uut:
    entity work.LogicAnalyser 
    PORT MAP (
-      reset          => reset,
-      clock          => clock,
-      enable         => enable,
-      sample         => sample,
-      dataIn         => dataIn,
-      dataOut        => dataOut,
-      addr           => addr,
-      wr             => wr,
-      rd             => rd
+      reset                 => reset,
+      clock_100MHz          => clock_100MHz,
+      clock_100MHz_         => clock_100MHz_n,
+      clock_200MHz          => clock_200MHz,
+      
+      -- FT2232H Interface
+      ft2232h_rxf_n         => ft2232h_rxf_n,
+      ft2232h_txe_n         => ft2232h_txe_n,
+      ft2232h_rd_n          => ft2232h_rd_n,
+      ft2232h_wr            => ft2232h_wr,
+      ft2232h_data          => ft2232h_data,
+      
+      enable                => enable,
+      sample                => sample,
+      
+      -- SDRAM
+      sdram_clk             => open,
+      sdram_cke             => open,     
+      sdram_cs              => open,
+      sdram_ras_n           => open,
+      sdram_cas_n           => open,
+      sdram_we_n            => open,
+      sdram_dqm             => open,
+      sdram_addr            => open,
+      sdram_ba              => open,
+      sdram_data            => open
    );
 
    -- clock process definitions
-   clock_process :
+   clock_200MHz_process :
    process
    begin
       while not complete loop
-         clock <= '1';
+         clock_200MHz <= '1';
          wait for clock_period/2;
-         clock <= '0';
+         clock_200MHz <= '0';
          wait for clock_period/2;
+      end loop;
+      -- kill clock
+      wait;
+   end process; 
+   
+   clock_100MHz_process :
+   process
+   begin
+      while not complete loop
+         clock_100MHz <= '1';
+         wait for clock_period;
+         clock_100MHz <= '0';
+         wait for clock_period;
       end loop;
       -- kill clock
       wait;
@@ -62,13 +99,13 @@ BEGIN
    
    procedure writeLut(addrIn : AddressBusType; data : DataBusType) is
    begin
-      wr     <= '1';
+      ft2232h_wr     <= '1';
       addr   <= addrIn;
       dataIn <= data;
       wait for 0.1*clock_period;
       wait until rising_edge(clock);
       wait for 0.1*clock_period;
-      wr     <= '0';
+      ft2232h_wr     <= '0';
       wait for 12.4*clock_period;
    end procedure;
    
@@ -124,8 +161,6 @@ BEGIN
       ( to_unsigned(LUT_SR_ADDRESS, ADDRESS_BUS_WIDTH), "00000000", "00000000", "00000000", "00001000" ),
       ( to_unsigned(LUT_SR_ADDRESS, ADDRESS_BUS_WIDTH), "00000000", "00000000", "00000000", "00000000" )
    );
-
-
    
    procedure writeAllLuts is
    begin

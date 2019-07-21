@@ -17,7 +17,7 @@ ARCHITECTURE behavior OF TriggerBusInterface_tb IS
    signal dataOut : DataBusType  := (others => '0');
    signal wr      : std_logic    := '0';
    signal rd      : std_logic    := '0';
-   signal addr    : AddressBusType := (others => '0');
+   signal busy    : std_logic;
 
    -- LUT control
    signal lut_config_ce  : std_logic := '0';
@@ -36,11 +36,15 @@ BEGIN
    PORT MAP (
       reset   => reset,
       clock   => clock,
-      dataIn  => dataIn,
-      dataOut => dataOut,
-      addr    => addr,
+
       wr      => wr,
+      dataIn  => dataIn,
+
       rd      => rd,
+      dataOut => dataOut,
+      
+      busy    => busy,
+
       lut_config_ce  => lut_config_ce,
       lut_config_in  => lut_config_in,
       lut_config_out => lut_config_out
