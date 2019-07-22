@@ -240,7 +240,17 @@ public:
    }
 
    TriggerPattern(const char *triggerString) {
-      memcpy(triggerValue, triggerString, SAMPLE_WIDTH+1);
+      if (strlen(triggerString)) {
+
+      }
+      memset(triggerValue, 'X', SAMPLE_WIDTH);
+      unsigned width  = strlen(triggerString);
+      if (width>SAMPLE_WIDTH) {
+         width = SAMPLE_WIDTH;
+      }
+      unsigned offset = SAMPLE_WIDTH-width;
+      memcpy(triggerValue+offset, triggerString, width);
+      triggerValue[SAMPLE_WIDTH] = '\0';
    }
 
    TriggerPattern &operator=(const char *&triggerString) {
