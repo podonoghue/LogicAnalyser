@@ -124,7 +124,7 @@ public:
 };
 
 /// Number of sample inputs
-static constexpr int SAMPLE_WIDTH = 2;
+static constexpr int SAMPLE_WIDTH = 16;
 
 //====================================================================
 // Trigger Steps
@@ -164,10 +164,10 @@ static constexpr int COMBINERS_PER_LUT = 4;
 // Each LUT (shift-register) implements one bit from each of the count comparisons
 
 // Number of bits in a step trigger counter
-static constexpr int NUM_TRIGGER_COUNTER_BITS   = 16;
+//static constexpr int NUM_TRIGGER_COUNTER_BITS   = 16;
 
 /// Number of bits implemented in a CountMatcher LUT
-static constexpr int COUNT_MATCHERS     = 4;
+//static constexpr int COUNT_MATCHERS     = 4;
 
 //====================================================================
 
@@ -189,7 +189,7 @@ static constexpr int LUTS_FOR_CONFIG = 0;//NUM_CONFIG_WORDS/1;
 static constexpr int LUTS_FOR_TRIGGER_PATTERNS = MAX_TRIGGER_STEPS*LUTS_PER_TRIGGER_STEP_FOR_PATTERNS;
 
 /// Number of LUTS for triggers used for counter matchers ( 1 per counter bit)
-static constexpr int LUTS_FOR_TRIGGER_COUNTS = NUM_TRIGGER_COUNTER_BITS;
+static constexpr int LUTS_FOR_TRIGGER_COUNTS = NUM_MATCH_COUNTER_BITS;
 
 /// Number of LUTS for trigger combiners for each trigger step
 static constexpr int LUTS_FOR_TRIGGER_COMBINERS = MAX_TRIGGER_STEPS;

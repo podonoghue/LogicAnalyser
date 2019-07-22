@@ -70,7 +70,6 @@ BEGIN
    procedure writeLut(addrIn : AddressBusType; data : DataBusType) is
    begin
       wr     <= '1';
-      addr   <= addrIn;
       dataIn <= data;
       wait until falling_edge(clock);
       wr     <= '0';

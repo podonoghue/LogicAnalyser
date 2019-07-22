@@ -49,11 +49,13 @@ entity TriggerBlock is
       clock          : in  std_logic;
 
       -- Bus interface
-      wr             : in   std_logic;
+      wr_luts        : in   std_logic;
       dataIn         : in   DataBusType;
 
-      rd             : in   std_logic;
+      rd_luts        : in   std_logic;
       dataOut        : out  DataBusType;
+      
+      bus_busy       : out  std_logic;
       
       -- Trigger logic
       enable         : in  std_logic;
@@ -99,12 +101,12 @@ begin
 		clock          => clock,
 
 		dataIn         => dataIn ,
-		wr             => wr,
+		wr             => wr_luts,
 
 		dataOut        => dataOut,
-		rd             => rd,
+		rd             => rd_luts,
 
-      busy           => open,
+      busy           => bus_busy,
 
 		lut_config_ce  => lut_config_ce,
 		lut_config_in  => lut_config_in,

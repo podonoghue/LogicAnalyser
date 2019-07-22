@@ -58,7 +58,7 @@ subtype SampleDataType is std_logic_vector(SAMPLE_WIDTH-1 downto 0);
 -- Triggering
 
 -- Maximum number of steps in complex trigger sequence
-constant MAX_TRIGGER_STEPS  : positive := 16; -- Testing 4
+constant MAX_TRIGGER_STEPS  : positive := 4; -- Actual 16; -- Testing 4
 
 -- Type for a trigger iteration
 subtype TriggerRangeType    is unsigned(3 downto 0);
@@ -95,5 +95,10 @@ constant SDRAM_BYTE_LANES  : natural := SDRAM_DATA_WIDTH/8;
 subtype sdram_AddrType      is std_logic_vector(SDRAM_ADDR_WIDTH-1 downto 0);  
 subtype sdram_DataType      is std_logic_vector(SDRAM_DATA_WIDTH-1 downto 0);  
 subtype sdram_ByteSelType   is std_logic_vector(SDRAM_BYTE_LANES-1 downto 0);  
+
+--==============================================================
+--
+   constant C_NOP          : DataBusType := "00000000";
+   constant C_LUT_CONFIG   : DataBusType := "00000001";
 
 end LogicAnalyserPackage;

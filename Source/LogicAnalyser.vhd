@@ -19,7 +19,7 @@ entity LogicAnalyser is
       ft2232h_rxf_n  : in    std_logic;   -- Rx FIFO Full
       ft2232h_txe_n  : in    std_logic;   -- Tx FIFO Empty 
       ft2232h_rd_n   : out   std_logic;   -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
-      ft2232h_wr     : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
+      ft2232h_wr_n     : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
       ft2232h_data   : inOut DataBusType; -- FIFO Data I/O
       
       -- Trigger logic
@@ -57,54 +57,61 @@ architecture Behavioral of LogicAnalyser is
    signal cmd_dataOut             : sdram_phy_DataType;
    signal cmd_dataOutReady        : std_logic;
    signal cmd_address             : sdram_AddrType;
+      
+   signal lastReadData            : DataBusType;
+   signal lastReadDataValid       : std_logic;
    
---   type RegisterType : array range 0 to 2**ADDRESS_BUS_WIDTH-1 of DataBusType;
---   signal registers  : RegisterType;
-   
-   signal lastReadData      : DataBusType;
-   signal lastReadDataValid : std_logic;
-   
-   signal dataOutOred         : DataBusType;
-   signal dataOutTriggerBlock : DataBusType;
+   signal dataOutOred             : DataBusType;
+   signal dataOutTriggerBlock     : DataBusType;
    
    -- FT2232H Interface
-   signal receive_data     : DataBusType;
-   signal receive_data_st  : std_logic;
+   signal receive_data            : DataBusType;
+   signal receive_data_st         : std_logic;
 
-   signal write_data       : DataBusType;
-   signal write_data_req   : std_logic;
+   signal send_data              : DataBusType;
+   signal send_data_req          : std_logic;
 
    -- Control state machine
    type StateType is (s_cmd, s_size, s_data);
    signal state : StateType;
    
-   signal comand     : DataBusType;
+   signal command     : DataBusType;
    
-   constant C_NOP : DataBusType := "00000000";
-
+   signal wr_trigger_luts    : std_logic;
+   signal receive_data_ready : std_logic;
+   signal send_data_ready    : std_logic;
+   signal trigger_bus_busy   : std_logic;
+   
 begin
    
-   write_data     <= x"A5";
+   send_data     <= x"A5";
    
    ft2232h_Interface_inst:
    entity work.ft2232h_Interface 
    PORT MAP (
-      reset            => reset,
-      clock_100MHz     => clock_100MHz,
+      reset              => reset,
+      clock_100MHz       => clock_100MHz,
       
-      ft2232h_rxf_n    => ft2232h_rxf_n,
-      ft2232h_txe_n    => ft2232h_txe_n,
-      ft2232h_rd_n     => ft2232h_rd_n,
-      ft2232h_wr       => ft2232h_wr,
-      ft2232h_data     => ft2232h_data,
+      -- FT2232H interface
+      ft2232h_rxf_n      => ft2232h_rxf_n,
+      ft2232h_rd_n       => ft2232h_rd_n,
       
-      receive_data     => receive_data,
-      receive_data_st  => receive_data_st,
-      write_data       => write_data,
-      write_data_req   => write_data_req
+      ft2232h_txe_n      => ft2232h_txe_n,
+      ft2232h_wr_n       => ft2232h_wr_n,
+      
+      ft2232h_data       => ft2232h_data,
+      
+      -- Analyser interface
+      receive_data       => receive_data,
+      receive_data_ready => receive_data_ready,
+      receive_data_st    => receive_data_st,
+      
+      send_data          => send_data,
+      send_data_req      => send_data_req,
+      send_data_ready    => send_data_ready
    );
 
-   write_data_req <= cmd_dataOutReady;
+   send_data_req <= cmd_dataOutReady;
 
    cmd_enable        <= '0';
    cmd_wr            <= '0';
@@ -167,13 +174,40 @@ begin
          triggerFound   => triggerFound,
          
          -- Bus interface
-         wr        => receive_data_st,       
-         dataIn    => receive_data,   
-
-         rd        => '0',
-         dataOut   => open
+         wr_luts        => wr_trigger_luts,       
+         dataIn         => receive_data,   
+         rd_luts        => '0',
+         dataOut        => open,         
+         bus_busy       => trigger_bus_busy
         );
 
+   ProcSwitching:
+   process(command, receive_data_st, trigger_bus_busy)
+   begin
+      -- Default to not accept new data
+      receive_data_ready  <= '0';
+      wr_trigger_luts     <= '0';
+      
+      case (command) is
+         when C_NOP =>
+            receive_data_ready  <= '1';
+            null;
+            
+         when C_LUT_CONFIG =>
+            receive_data_ready  <= not trigger_bus_busy;
+            if (state = s_data) then
+              wr_trigger_luts     <= receive_data_st;
+            end if;            
+         when others =>
+            null;
+      end case;
+      
+      -- Always accept data in these states
+      if ((state = s_cmd) or (state = s_size)) then
+         receive_data_ready  <= '1';
+      end if;
+   end process;
+   
    ProcStateMachine:
    process(clock_100MHz)
 
@@ -184,26 +218,28 @@ begin
          case (state) is
             when s_cmd =>
                if (receive_data_st = '1') then
-                  comand <= receive_data;
+                  command <= receive_data;
                   if (receive_data /= C_NOP) then
-                     state  <= s_size;
+                     state <= s_size;
                   end if;
                end if;                  
             when s_size =>
                if (receive_data_st = '1') then
-                  data_count := to_integer(signed(receive_data));
+                  data_count := to_integer(unsigned(receive_data));
                   state <= s_data;
                end if;                  
             when s_data =>
-               data_count := data_count -1;
                if (receive_data_st = '1') then
+                  data_count := data_count-1;
                   if (data_count = 0) then
-                     state <= s_cmd;
+                     state   <= s_cmd;
+                     command <= C_NOP;
                   end if;
                end if;                  
          end case;
-         if (reset <= '1') then
-            state <= s_cmd;
+         if (reset = '1') then
+            state   <= s_cmd;
+            command <=  C_NOP;
          end if;
       end if;
    end process;

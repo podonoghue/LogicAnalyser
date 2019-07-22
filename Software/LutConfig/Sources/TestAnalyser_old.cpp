@@ -238,7 +238,6 @@ void printTriggers(TriggerSetup triggers) {
  */
 void printLutsAsVhdlArrayPreamble(unsigned number) {
    using namespace USBDM;
-   constexpr unsigned PREAMBLE = 2;
 
    console.writeln();
    console.write("   constant SIM_SAMPLE_WIDTH           : natural := ").write(SAMPLE_WIDTH).writeln(";");
@@ -248,10 +247,8 @@ void printLutsAsVhdlArrayPreamble(unsigned number) {
    console.write("   constant SIM_NUM_MATCH_COUNTER_BITS : natural := ").write(NUM_MATCH_COUNTER_BITS).writeln(";");
 
    console.writeln();
-   console.write("   type StimulusArray is array (0 to ").write((4*number-1)+PREAMBLE).writeln(") of DataBusType;");
+   console.write("   type StimulusArray is array (0 to ").write(number-1).writeln(") of StiumulusEntry;");
    console.writeln("   variable stimulus : StimulusArray := (");
-   console.writeln("      -- Preamble ");
-   console.write("      C_LUT_CONFIG, ").write("\"").write(4*number, Radix_2).writeln("\", ");
 }
 /**
  * Print an array of LUTs
@@ -265,11 +262,11 @@ void printLutsAsVhdlArray(uint32_t lutValues[], unsigned number, const char *tit
    console.write("      -- ").writeln(title);
    console.setPadding(Padding_LeadingZeroes).setWidth(8);
    for(unsigned index=0; index<number; index++) {
-      console.write("      ");
+      console.write("      ( to_unsigned(LUT_SR_ADDRESS, ADDRESS_BUS_WIDTH), ");
       console.write("\"").write((lutValues[index]>>24)&0xFF, Radix_2).write("\", ");
       console.write("\"").write((lutValues[index]>>16)&0xFF, Radix_2).write("\", ");
       console.write("\"").write((lutValues[index]>>8)&0xFF,  Radix_2).write("\", ");
-      console.write("\"").write((lutValues[index]>>0)&0xFF,  Radix_2).write("\"");
+      console.write("\"").write((lutValues[index]>>0)&0xFF,  Radix_2).write("\" )");
       if ((index!=(number-1)) || !end) {
          console.write(",");
       }
@@ -286,6 +283,29 @@ void printLutsAsVhdlArray(uint32_t lutValues[], unsigned number, const char *tit
 void printLutsAsVhdlArrayPostamble() {
    using namespace USBDM;
    console.writeln("   );");
+}
+
+void printLutsForSimulation1() {
+   uint32_t lutValues[TOTAL_TRIGGER_LUTS] = {0};
+
+   TriggerSetup setup = {triggers1, 3};
+
+   printTriggers(setup);
+
+   printLutsAsVhdlArrayPreamble(TOTAL_TRIGGER_LUTS);
+   getTriggerPatternMatcherLutValues(setup,  lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGER_PATTERNS, "PatternMatcher LUT values", false);
+   getTriggerCombinerLutValues(setup, lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGER_COMBINERS, "Combiner LUT values", false);
+   getTriggerCountLutValues(setup, lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGER_COUNTS, "Count LUT values", false);
+   getTriggerFlagLutValues(setup, lutValues);
+   printLutsAsVhdlArray(lutValues, LUTS_FOR_TRIGGERS_FLAGS, "Flag LUT values", true);
+   printLutsAsVhdlArrayPostamble();
+
+   for(;;) {
+      __asm__("bkpt");
+   }
 }
 
 void printLutsForSimulation() {
