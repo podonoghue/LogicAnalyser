@@ -247,27 +247,24 @@ begin
 -- out of phase with the control signals (ensuring setup and hold)
 --------------------------------------------------------------------
 
---sdram_clk_forward : ODDR2
---   generic map(
---      DDR_ALIGNMENT  => "NONE", 
---      INIT           => '0', 
---      SRTYPE         => "SYNC"
---   )
---   port map (
---      R  => '0', 
---      S  => '0', 
---      CE => '1', 
---      D0 => '0', 
---      D1 => '1',
---      C0 => clock_100MHz, 
---      C1 => clock_100MHz_n, 
---      Q  => sdram_clk 
---   );
---
---   clock_100MHz_n <= not clock_100MHz;
+sdram_clk_forward : ODDR2
+   generic map(
+      DDR_ALIGNMENT  => "NONE", 
+      INIT           => '0', 
+      SRTYPE         => "SYNC"
+   )
+   port map (
+      R  => '0', 
+      S  => '0', 
+      CE => '1', 
+      D0 => '0', 
+      D1 => '1',
+      C0 => clock_100MHz, 
+      C1 => clock_100MHz_n, 
+      Q  => sdram_clk 
+   );
 
-   sdram_clk  <= clock_100MHz_n;
-   sdram_cs   <= cmd(command)(3);
+   sdram_cs     <= cmd(command)(3);
    sdram_ras_n  <= cmd(command)(2);
    sdram_cas_n  <= cmd(command)(1);
    sdram_we_n   <= cmd(command)(0);
@@ -285,7 +282,7 @@ main_proc:
       if rising_edge(clock_100MHz) then
       
          ------------------------------------------------
-         -- Default state is to do nothing
+         -- Default is to do nothing
          ------------------------------------------------
          command           <= C_NOP;
          sdram_addr        <= (others => '0');

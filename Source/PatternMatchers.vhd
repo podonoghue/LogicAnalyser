@@ -87,7 +87,7 @@ signal   lut_chainOut          : std_logic_vector(NUM_CHAINED_MODULES-1 downto 0
 begin
    
    -- Pipeline registers
-   triggerPatternMatch <= triggers(to_integer(triggerStep)) when rising_edge(clock);
+   triggerPatternMatch <= triggers(to_integer(triggerStep));
    
    GenerateSteps: -- Each trigger step
    for triggerStep in MAX_TRIGGER_STEPS-1 downto 0 generate

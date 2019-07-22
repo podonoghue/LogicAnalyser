@@ -19,13 +19,13 @@ entity LogicAnalyser is
       ft2232h_rxf_n  : in    std_logic;   -- Rx FIFO Full
       ft2232h_txe_n  : in    std_logic;   -- Tx FIFO Empty 
       ft2232h_rd_n   : out   std_logic;   -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
-      ft2232h_wr_n     : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
+      ft2232h_wr_n   : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
       ft2232h_data   : inOut DataBusType; -- FIFO Data I/O
       
       -- Trigger logic
-      enable         : in    std_logic;
       sample         : in    SampleDataType;
-      triggerFound   : out   std_logic;
+      armed          : out   std_logic;
+      sampling       : out   std_logic;
 
       -- SDRAM interface
       sdram_clk      : out   std_logic;
@@ -42,10 +42,15 @@ entity LogicAnalyser is
 end entity;
 
 architecture Behavioral of LogicAnalyser is
-
+   -- Sampling
+   -- iob_sample -> currentSample -> lastSample
+   signal iob_sample              : SampleDataType;
    signal currentSample           : SampleDataType;
    signal lastSample              : SampleDataType;
    
+   attribute IOB : string;
+   attribute IOB of iob_sample    : signal is "true";
+
    -- SDRAM interface             
    signal cmd_ready               : std_logic; 
    signal cmd_enable              : std_logic; 
@@ -81,8 +86,15 @@ architecture Behavioral of LogicAnalyser is
    signal receive_data_ready : std_logic;
    signal send_data_ready    : std_logic;
    signal trigger_bus_busy   : std_logic;
+   signal triggerFound       : std_logic;
+   
+   signal controlRegister    : DataBusType;
+   alias  controlReg_enable  : std_logic is controlRegister(0);
    
 begin
+   
+   armed    <= controlReg_enable;
+   sampling <= triggerFound;
    
    send_data     <= x"A5";
    
@@ -153,11 +165,13 @@ begin
    begin
       if rising_edge(clock_100MHz) then
          if (reset = '1') then
-            currentSample    <= (others => '0');
-            lastSample       <= (others => '0');
+            iob_sample     <= (others => '0');
+            currentSample  <= (others => '0');
+            lastSample     <= (others => '0');
          else
-            currentSample    <= sample;
-            lastSample       <= currentSample;
+            iob_sample     <= sample;
+            currentSample  <= iob_sample;
+            lastSample     <= currentSample;
          end if;
       end if;
    end process;
@@ -168,7 +182,7 @@ begin
       port map (
          clock          => clock_100MHz,
          reset          => reset,
-         enable         => enable,
+         enable         => controlReg_enable,
          currentSample  => currentSample,
          lastSample     => lastSample,
          triggerFound   => triggerFound,
@@ -181,8 +195,23 @@ begin
          bus_busy       => trigger_bus_busy
         );
 
+   ControlRegProc:
+   process(clock_100MHz)
+   begin
+      if rising_edge(clock_100MHz) then
+         if (reset = '1') then
+            controlRegister <= (others => '0');
+         elsif ((command = C_WR_CONTROL) and (state = s_data)) then
+            controlRegister <= receive_data;
+         end if;
+         if (triggerFound = '1') then
+            controlReg_enable <= '0';
+         end if;
+      end if;   
+   end process;
+   
    ProcSwitching:
-   process(command, receive_data_st, trigger_bus_busy)
+   process(command, state, receive_data_st, trigger_bus_busy)
    begin
       -- Default to not accept new data
       receive_data_ready  <= '0';
@@ -198,6 +227,11 @@ begin
             if (state = s_data) then
               wr_trigger_luts     <= receive_data_st;
             end if;            
+
+         when C_WR_CONTROL =>
+            receive_data_ready  <= '1';
+            null; -- See ControlRegProc
+            
          when others =>
             null;
       end case;

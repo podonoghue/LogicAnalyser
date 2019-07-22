@@ -76,9 +76,9 @@ NET ft2232h_data(6) LOC="P120" | IOSTANDARD=LVTTL;                              
 NET ft2232h_data(7) LOC="P121" | IOSTANDARD=LVTTL;                                # C7
 #NET C(8)           LOC="P123" | IOSTANDARD=LVTTL;                                # C8
 #NET C(9)           LOC="P124" | IOSTANDARD=LVTTL;                                # C9
-NET reset           LOC="P126" | IOSTANDARD=LVTTL;                                # C10
-#NET C(11)          LOC="P127" | IOSTANDARD=LVTTL;                                # C11
-NET ft2232h_wr      LOC="P131" | IOSTANDARD=LVTTL;                                # C12
+NET sampling        LOC="P126" | IOSTANDARD=LVTTL;                                # C10
+NET reset_n         LOC="P127" | IOSTANDARD=LVTTL;                                # C11
+NET ft2232h_wr_n    LOC="P131" | IOSTANDARD=LVTTL;                                # C12
 NET ft2232h_rd_n    LOC="P132" | IOSTANDARD=LVTTL;                                # C13
 NET ft2232h_txe_n   LOC="P133" | IOSTANDARD=LVTTL;                                # C14
 NET ft2232h_rxf_n   LOC="P134" | IOSTANDARD=LVTTL;                                # C15
@@ -123,7 +123,7 @@ NET sdram_cs        LOC="P1"   | IOSTANDARD=LVTTL;                              
 NET sdram_clk       LOC="P32"  | IOSTANDARD=LVTTL;                                # sdram_clk
 NET sdram_cke       LOC="P33"  | IOSTANDARD=LVTTL;                                # sdram_cke
 
-NET led1            LOC="P112" | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=SLOW;          # LED1
+NET armed           LOC="P112" | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=SLOW;          # LED1
 
 #NET jtag_tms       LOC="P107" | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=FAST;          # JTAG_TMS
 #NET jtag_tck       LOC="P109" | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=FAST;          # JTAG_TCK

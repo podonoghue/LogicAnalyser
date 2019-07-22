@@ -48,7 +48,6 @@ begin
    for counterBits in NUM_MATCH_COUNTER_BITS-1 downto 0 generate
    
    begin
-   
       cfglut5_inst : cfglut5
       generic map (
          init => x"00000000"
@@ -71,7 +70,6 @@ begin
          o5  => compareMatchCounter(counterBits), -- LUT4 output LUT[15..0]
          o6  => open                       -- LUT4 output LUT[31..16]     
       );
-      
    end generate;
   
    SingleLutChainGenerate:

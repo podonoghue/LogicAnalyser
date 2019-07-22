@@ -100,5 +100,6 @@ subtype sdram_ByteSelType   is std_logic_vector(SDRAM_BYTE_LANES-1 downto 0);
 --
    constant C_NOP          : DataBusType := "00000000";
    constant C_LUT_CONFIG   : DataBusType := "00000001";
+   constant C_WR_CONTROL   : DataBusType := "00000010";
 
 end LogicAnalyserPackage;
