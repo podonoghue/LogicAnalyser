@@ -1,0 +1,190 @@
+; Installation file (.inf) for "Xilinx USB Cable" devices
+; Copyright (c) 2007 Xilinx, Inc.
+;
+
+[Version]
+Signature="$CHICAGO$"  ; Represents all Windows OSs
+Class="Programming cables"
+ClassGUID = {62C3B72B-1D17-42ed-8412-6DFE78954552}
+Provider=%xilinx%
+;CatalogFile.ntamd64=xusbdrvr.cat ; Use cat file on x64 only
+CatalogFile=xusbdrvr.cat ; Use cat for all OS types
+DriverVer=05/21/2009, 2.0.1.2
+
+; Driver information
+; ------------------
+[Manufacturer]
+%Mfg%=DeviceList,ntamd64
+
+[DeviceList]
+"Xilinx USB Cable"=Install, USB\VID_03FD&PID_0008
+"Xilinx Platform Cable USB Firmware Loader"=Install.Loader, USB\VID_03FD&PID_0007
+"Xilinx Embedded Platform USB Firmware Loader"=Install.EmbeddedLoader, USB\VID_03FD&PID_0009
+"Xilinx Embedded Platform USB Firmware Loader"=Install.EmbeddedLpLoader, USB\VID_03FD&PID_000D
+"Xilinx Platform Cable USB Firmware Loader"=Install.LpLoader, USB\VID_03FD&PID_000F
+"Xilinx Platform Cable USB II Firmware Loader"=Install.Pusb2Loader, USB\VID_03FD&PID_0013
+"Xilinx Platform Cable USB II SE Firmware Loader"=Install.Pusb2SeLoader, USB\VID_03FD&PID_0015
+
+[DeviceList.ntamd64]
+"Xilinx USB Cable"=Install, USB\VID_03FD&PID_0008
+"Xilinx Platform Cable USB Firmware Loader"=Install.Loader, USB\VID_03FD&PID_0007
+"Xilinx Embedded Platform USB Firmware Loader"=Install.EmbeddedLoader, USB\VID_03FD&PID_0009
+"Xilinx Embedded Platform USB Firmware Loader"=Install.EmbeddedLpLoader, USB\VID_03FD&PID_000D
+"Xilinx Platform Cable USB Firmware Loader"=Install.LpLoader, USB\VID_03FD&PID_000F
+"Xilinx Platform Cable USB II Firmware Loader"=Install.Pusb2Loader, USB\VID_03FD&PID_0013
+"Xilinx Platform Cable USB II SE Firmware Loader"=Install.Pusb2SeLoader, USB\VID_03FD&PID_0015
+
+; ------------------------------------
+; Installation section (x86)
+; ------------------------------------
+[Install]  ; Installation script for Windows
+CopyFiles=FilesToCopy
+
+[Install.Loader]
+CopyFiles=FilesToCopy.Loader
+
+[Install.EmbeddedLoader]
+CopyFiles=FilesToCopy.Loader
+
+[Install.EmbeddedLpLoader]
+CopyFiles=FilesToCopy.Loader
+
+[Install.LpLoader]
+CopyFiles=FilesToCopy.Loader
+
+[Install.Pusb2Loader]
+CopyFiles=FilesToCopy.Loader
+
+[Install.Pusb2SeLoader]
+CopyFiles=FilesToCopy.Loader
+
+[FilesToCopy]
+; To copy windrvr6.sys upon installation remove the ';' from the start of the following line
+;windrvr6.sys ,,,0x40  ; 0x40 == COPYFLG_OVERWRITE_OLDER_ONLY
+
+[FilesToCopy.Loader]
+xusbdfwu.sys ,,,0x20  ; 0x20 == COPYFLG_NO_VERSION_DIALOG
+xusb_xup.sys ,,,0x20  ; 0x20 == COPYFLG_NO_VERSION_DIALOG
+xusb_emb.sys ,,,0x20  ; 0x20 == COPYFLG_NO_VERSION_DIALOG
+xusb_xlp.sys ,,,0x20  ; 0x20 == COPYFLG_NO_VERSION_DIALOG
+xusb_xp2.sys ,,,0x20  ; 0x20 == COPYFLG_NO_VERSION_DIALOG
+xusb_xse.sys ,,,0x20  ; 0x20 == COPYFLG_NO_VERSION_DIALOG
+
+; ---------------------------
+
+[ClassInstall32]  ; Register a new class in Windows
+AddReg=UpDateRegistry
+
+; ---------------------------
+
+[UpDateRegistry]
+HKR,,,,"Programming cables"
+HKR,,Icon,,-5
+
+; ------------------------------------
+; Defining Service
+; ------------------------------------
+[Install.Services]
+Addservice=WinDriver6, 0x00000002, Service_Info
+
+[Install.Loader.Services]
+Addservice=XilinxFirmwareLoader, 0x00000002, Service_Info.Loader
+
+[Install.EmbeddedLoader.Services]
+Addservice=XilinxFirmwareEmbeddedLoader, 0x00000002, Service_Info.EmbeddedLoader
+
+[Install.EmbeddedLpLoader.Services]
+Addservice=XilinxFirmwareEmbeddedLpLoader, 0x00000002, Service_Info.EmbeddedLpLoader
+
+[Install.LpLoader.Services]
+Addservice=XilinxFirmwareLpLoader, 0x00000002, Service_Info.LpLoader
+
+[Install.Pusb2Loader.Services]
+Addservice=XilinxFirmwarePusb2Loader, 0x00000002, Service_Info.Pusb2Loader
+
+[Install.Pusb2SeLoader.Services]
+Addservice=XilinxFirmwarePusb2SeLoader, 0x00000002, Service_Info.Pusb2SeLoader
+
+[Service_Info]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\windrvr6.sys
+
+[Service_Info.Loader]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\xusbdfwu.sys
+
+[Service_Info.EmbeddedLoader]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\xusb_xup.sys
+
+[Service_Info.EmbeddedLpLoader]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\xusb_emb.sys
+
+[Service_Info.LpLoader]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\xusb_xlp.sys
+
+[Service_Info.Pusb2Loader]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\xusb_xp2.sys
+
+[Service_Info.Pusb2SeLoader]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\xusb_xse.sys
+
+; ------------------------------------
+; Source file information
+; ------------------------------------
+[SourceDisksFiles.x86]
+;windrvr6.sys=1  ; This indicates that the windrvr6.sys file is located on
+    ; disk number 1 of "Xilinx, Inc. Installation disks" set.
+xusbdfwu.sys=1,x86
+xusb_xup.sys=1,x86
+xusb_emb.sys=1,x86
+xusb_xlp.sys=1,x86
+xusb_xp2.sys=1,x86
+xusb_xse.sys=1,x86
+
+[SourceDisksFiles.amd64]
+;windrvr6.sys=1  ; This indicates that the windrvr6.sys file is located on
+    ; disk number 1 of "Xilinx, Inc. Installation disks" set.
+xusbdfwu.sys=1,amd64
+xusb_xup.sys=1,amd64
+xusb_emb.sys=1,amd64
+xusb_xlp.sys=1,amd64
+xusb_xp2.sys=1,amd64
+xusb_xse.sys=1,amd64
+
+[SourceDisksNames]
+1=%xilinx_media%,,  ; This indicates that disk number 1
+    ; has the label "Xilinx, Inc. Installation Disk". The installer will
+    ; search for windrvr6.sys in this disk.
+
+[DestinationDirs]
+DefaultDestDir=10, System32\Drivers  ; The location to which the windrvr6.sys
+    ; file will be copied (10 translates to the correct Windows directory
+    ; on the target machine).
+
+
+;---------------------------------------------------------------;
+
+[Strings]
+xilinx_media="Xilinx, Inc. Installation Disk"
+xilinx="Xilinx, Inc."
+Mfg="Xilinx, Inc."
+
