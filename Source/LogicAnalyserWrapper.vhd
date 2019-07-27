@@ -14,10 +14,11 @@ entity LogicAnalyserWrapper is
 
       -- Bus interface
       ft2232h_rxf_n  : in    std_logic;      -- Rx FIFO Full
-      ft2232h_txe_n  : in    std_logic;      -- Tx FIFO Empty 
       ft2232h_rd_n   : out   std_logic;      -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
+      ft2232h_txe_n  : in    std_logic;      -- Tx FIFO Empty 
       ft2232h_wr_n   : out   std_logic;      -- Tx FIFO Write (Data captured on rising edge)
       ft2232h_data   : inOut DataBusType;    -- FIFO Data I/O
+      ft2232h_siwu_n : out   std_logic;      -- Flush USB buffer(Send Immediate / WakeUp signal)
       
       -- Trigger logic
       sample         : in    SampleDataType;
@@ -27,7 +28,7 @@ entity LogicAnalyserWrapper is
       -- SDRAM interface
       sdram_clk      : out   std_logic;
       sdram_cke      : out   std_logic;
-      sdram_cs       : out   std_logic;
+      sdram_cs_n     : out   std_logic;
       sdram_ras_n    : out   std_logic;
       sdram_cas_n    : out   std_logic;
       sdram_we_n     : out   std_logic;
@@ -63,7 +64,8 @@ begin
       ft2232h_rd_n   => ft2232h_rd_n,      
       ft2232h_wr_n   => ft2232h_wr_n,    
       ft2232h_data   => ft2232h_data,  
-                      
+      ft2232h_siwu_n => ft2232h_siwu_n,
+      
       -- Trigger logic 
       sample         => sample,       
       armed          => armed,      
@@ -72,7 +74,7 @@ begin
       -- SDRAM Interface
       sdram_clk    => sdram_clk,   
       sdram_cke    => sdram_cke, 
-      sdram_cs     => sdram_cs,    
+      sdram_cs_n   => sdram_cs_n,    
       sdram_ras_n  => sdram_ras_n,   
       sdram_cas_n  => sdram_cas_n,   
       sdram_we_n   => sdram_we_n,    

@@ -17,10 +17,11 @@ entity LogicAnalyser is
 
       -- FT2232 Interface
       ft2232h_rxf_n  : in    std_logic;   -- Rx FIFO Full
-      ft2232h_txe_n  : in    std_logic;   -- Tx FIFO Empty 
       ft2232h_rd_n   : out   std_logic;   -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
+      ft2232h_txe_n  : in    std_logic;   -- Tx FIFO Empty 
       ft2232h_wr_n   : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
       ft2232h_data   : inOut DataBusType; -- FIFO Data I/O
+      ft2232h_siwu_n : out   std_logic;      -- Flush USB buffer(Send Immediate / WakeUp signal)
       
       -- Trigger logic
       sample         : in    SampleDataType;
@@ -30,7 +31,7 @@ entity LogicAnalyser is
       -- SDRAM interface
       sdram_clk      : out   std_logic;
       sdram_cke      : out   std_logic;
-      sdram_cs       : out   std_logic;
+      sdram_cs_n     : out   std_logic;
       sdram_ras_n    : out   std_logic;
       sdram_cas_n    : out   std_logic;
       sdram_we_n     : out   std_logic;
@@ -53,12 +54,8 @@ architecture Behavioral of LogicAnalyser is
 
    -- SDRAM interface             
    signal cmd_ready               : std_logic; 
-   signal cmd_enable              : std_logic; 
-   signal cmd_wr                  : std_logic;  
    signal cmd_done                : std_logic; 
-
-   signal cmd_dataIn              : sdram_phy_DataType;
-                                  
+                                 
    signal cmd_dataOut             : sdram_phy_DataType;
    signal cmd_dataOutReady        : std_logic;
    signal cmd_address             : sdram_AddrType;
@@ -91,6 +88,14 @@ architecture Behavioral of LogicAnalyser is
    signal controlRegister    : DataBusType;
    alias  controlReg_enable  : std_logic is controlRegister(0);
    
+   signal fifoEmpty : std_logic;
+   signal fifoFull  : std_logic;
+   signal writeFifo : std_logic;
+   signal readFifo  : std_logic;
+   signal fifoIn    : SampleDataType;
+   signal fifoOut   : SampleDataType;
+   signal fifoNotEmpty : std_logic;
+
 begin
    
    armed    <= controlReg_enable;
@@ -107,11 +112,10 @@ begin
       -- FT2232H interface
       ft2232h_rxf_n      => ft2232h_rxf_n,
       ft2232h_rd_n       => ft2232h_rd_n,
-      
       ft2232h_txe_n      => ft2232h_txe_n,
       ft2232h_wr_n       => ft2232h_wr_n,
-      
       ft2232h_data       => ft2232h_data,
+      ft2232h_siwu_n     => ft2232h_siwu_n,
       
       -- Analyser interface
       receive_data       => receive_data,
@@ -123,13 +127,24 @@ begin
       send_data_ready    => send_data_ready
    );
 
+	Fifo_inst:
+   entity work.fifo 
+   port map(
+		clock          => clock_100MHz,
+		reset          => reset,
+		fifo_full      => fifoFull,
+		fifo_wr_en     => writeFifo,
+		fifo_data_in   => fifoIn,
+		fifo_empty     => fifoEmpty,
+		fifo_rd_en     => readFifo,
+		fifo_data_out  => fifoOut
+	);
+
    send_data_req <= cmd_dataOutReady;
 
-   cmd_enable        <= '0';
-   cmd_wr            <= '0';
-   cmd_dataIn        <= (others => '1');
    cmd_address       <= (others => '1');
-   
+   fifoNotEmpty      <= not fifoEmpty;
+
    SDRAM_Controller_inst :
    entity work.SDRAM_Controller
    port map(
@@ -137,20 +152,20 @@ begin
       clock_100MHz_n   => clock_100MHz_n,
       reset            => reset,
 
-      cmd_wr           => cmd_wr,
-      cmd_enable       => cmd_enable,
+      cmd_wr           => fifoNotEmpty,
+      cmd_rd           => controlReg_enable,
       cmd_address      => cmd_address,
-      cmd_dataIn       => cmd_dataIn,
+      cmd_dataIn       => fifoOut,
 
       cmd_done         => cmd_done,
       cmd_dataOut      => cmd_dataOut,
       cmd_dataOutReady => cmd_dataOutReady,
       
-      intializing      => open,
+      initializing     => open,
       
       sdram_clk        => sdram_clk,
       sdram_cke        => sdram_cke,
-      sdram_cs         => sdram_cs,
+      sdram_cs_n       => sdram_cs_n,
       sdram_ras_n      => sdram_ras_n,
       sdram_cas_n      => sdram_cas_n,
       sdram_we_n       => sdram_we_n,

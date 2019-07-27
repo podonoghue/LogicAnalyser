@@ -306,6 +306,8 @@ BEGIN
       
       wait for 100 ns;
       complete <= true;
+      
+      wait;
    end process;
    
 END;

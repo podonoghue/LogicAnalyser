@@ -13,11 +13,10 @@ entity ft2232h_Interface is
       -- FT2232 interface
       ft2232h_rxf_n     : in    std_logic;   -- Rx FIFO Full
       ft2232h_rd_n      : out   std_logic;   -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
-
       ft2232h_txe_n     : in    std_logic;   -- Tx FIFO Empty 
       ft2232h_wr_n      : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
-
       ft2232h_data      : inOut DataBusType; -- FIFO Data I/O
+      ft2232h_siwu_n     : out   std_logic;      -- Flush USB buffer(Send Immediate / WakeUp signal)
 
       -- Receive interface      
       receive_data       : out   DataBusType;
@@ -49,6 +48,8 @@ architecture Behavioral of ft2232h_Interface is
    signal ft2232h_wr       : std_logic;   -- Tx FIFO Write (Data captured on rising edge)
 
 begin
+   ft2232h_siwu_n <= '1';
+
    ft2232h_rxf  <= not ft2232h_rxf_n;
    ft2232h_rd_n <= not ft2232h_rd;
 

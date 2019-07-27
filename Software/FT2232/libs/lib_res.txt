@@ -1,0 +1,764 @@
+
+FTD2XX.dll:
+         U FTD2XX_NULL_THUNK_DATA
+00000000 i .idata$2
+00000000 i .idata$4
+00000000 i .idata$5
+00000000 i .idata$6
+00dd9eb5 a @comp.id
+00000000 I __IMPORT_DESCRIPTOR_FTD2XX
+         U __NULL_IMPORT_DESCRIPTOR
+
+FTD2XX.dll:
+00dd9eb5 a @comp.id
+00000000 I __NULL_IMPORT_DESCRIPTOR
+
+FTD2XX.dll:
+00000000 I FTD2XX_NULL_THUNK_DATA
+00dd9eb5 a @comp.id
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_Close@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Close@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ClrDtr@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ClrDtr@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ClrRts@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ClrRts@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ComPortCancelIdle@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ComPortCancelIdle@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ComPortIdle@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ComPortIdle@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_CreateDeviceInfoList@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_CreateDeviceInfoList@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_CyclePort@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_CyclePort@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EEPROM_Program@28
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EEPROM_Program@28
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EEPROM_Read@28
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EEPROM_Read@28
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_Program@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_Program@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_ProgramEx@24
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_ProgramEx@24
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_Read@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_Read@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_ReadConfig@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_ReadConfig@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_ReadECC@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_ReadECC@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_ReadEx@24
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_ReadEx@24
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_UARead@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_UARead@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_UASize@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_UASize@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_UAWrite@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_UAWrite@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EE_WriteConfig@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EE_WriteConfig@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_EraseEE@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_EraseEE@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 I .idata$6
+00000000 T .text
+00000000 I __imp__FT_Finalise@0
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Finalise@0
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetBitMode@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetBitMode@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetComPortNumber@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetComPortNumber@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetDeviceInfo@24
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetDeviceInfo@24
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetDeviceInfoDetail@32
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetDeviceInfoDetail@32
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetDeviceInfoList@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetDeviceInfoList@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetDriverVersion@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetDriverVersion@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetEventStatus@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetEventStatus@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetLatencyTimer@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetLatencyTimer@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetLibraryVersion@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetLibraryVersion@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetModemStatus@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetModemStatus@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetQueueStatus@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetQueueStatus@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetQueueStatusEx@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetQueueStatusEx@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_GetStatus@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_GetStatus@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 I .idata$6
+00000000 T .text
+00000000 I __imp__FT_Initialise@0
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Initialise@0
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_IoCtl@32
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_IoCtl@32
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ListDevices@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ListDevices@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_Open@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Open@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_OpenEx@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_OpenEx@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_Purge@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Purge@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_Read@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Read@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ReadEE@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ReadEE@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_Reload@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Reload@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_Rescan@0
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Rescan@0
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ResetDevice@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ResetDevice@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_ResetPort@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_ResetPort@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_RestartInTask@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_RestartInTask@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetBaudRate@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetBaudRate@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetBitMode@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetBitMode@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetBreakOff@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetBreakOff@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetBreakOn@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetBreakOn@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetChars@20
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetChars@20
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetDataCharacteristics@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetDataCharacteristics@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetDeadmanTimeout@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetDeadmanTimeout@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetDivisor@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetDivisor@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetDtr@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetDtr@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetEventNotification@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetEventNotification@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetFlowControl@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetFlowControl@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetLatencyTimer@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetLatencyTimer@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetResetPipeRetryCount@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetResetPipeRetryCount@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetRts@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetRts@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetTimeouts@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetTimeouts@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetUSBParameters@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetUSBParameters@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_SetWaitMask@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_SetWaitMask@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_StopInTask@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_StopInTask@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_VendorCmdGet@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_VendorCmdGet@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_VendorCmdGetEx@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_VendorCmdGetEx@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_VendorCmdSet@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_VendorCmdSet@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_VendorCmdSetEx@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_VendorCmdSetEx@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_CancelIo@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_CancelIo@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_ClearCommBreak@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_ClearCommBreak@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_ClearCommError@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_ClearCommError@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_CloseHandle@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_CloseHandle@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_CreateFile@28
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_CreateFile@28
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_EscapeCommFunction@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_EscapeCommFunction@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_GetCommMask@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_GetCommMask@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_GetCommModemStatus@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_GetCommModemStatus@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_GetCommState@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_GetCommState@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_GetCommTimeouts@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_GetCommTimeouts@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_GetLastError@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_GetLastError@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_GetOverlappedResult@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_GetOverlappedResult@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_PurgeComm@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_PurgeComm@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_ReadFile@20
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_ReadFile@20
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_SetCommBreak@4
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_SetCommBreak@4
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_SetCommMask@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_SetCommMask@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_SetCommState@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_SetCommState@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_SetCommTimeouts@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_SetCommTimeouts@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_SetupComm@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_SetupComm@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_WaitCommEvent@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_WaitCommEvent@12
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_W32_WriteFile@20
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_W32_WriteFile@20
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_WaitOnMask@8
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_WaitOnMask@8
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_Write@16
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_Write@16
+
+FTD2XX.dll:
+00000000 I .idata$4
+00000000 I .idata$5
+00000000 T .text
+00000000 I __imp__FT_WriteEE@12
+         U __IMPORT_DESCRIPTOR_FTD2XX
+00000000 T _FT_WriteEE@12

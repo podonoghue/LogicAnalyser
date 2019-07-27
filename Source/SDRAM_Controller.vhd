@@ -1,30 +1,3 @@
-----------------------------------------------------------------------------------
--- Engineer: Mike Field <hamster@snap.net.nz>
--- 
--- Create Date:    14:09:12 09/15/2013 
--- Module Name:    SDRAM_Controller - Behavioral 
--- Description:    Simple SDRAM controller for a Micron 48LC16M16A2-7E
---                 or Micron 48LC4M16A2-7E @ 100MHz      
--- Revision: 
--- Revision 0.1 - Initial version
--- Revision 0.2 - Removed second clock_100MHz signal that isn't needed.
--- Revision 0.3 - Added back-to-back reads and writes.
--- Revision 0.4 - Allow refeshes to be delayed till next PRECHARGE is issued,
---                Unless they get really, really delayed. If a delay occurs multiple
---                refreshes might get pushed out, but it will have avioded about 
---                50% of the refresh overhead
--- Revision 0.5 - Add more paramaters to the design, allowing it to work for both the 
---                Papilio Pro and Logi-Pi
--- Revision 0.6 - Fixed bugs in back-to-back reads (thanks Scotty!)
--- Heavily modified for analyser - pgo
---
--- Worst case performance (single accesses to different rows or banks) is: 
--- Writes 16 cycles = 6,250,000 writes/sec = 25.0MB/s (excluding refresh overhead)
--- Reads  17 cycles = 5,882,352 reads/sec  = 23.5MB/s (excluding refresh overhead)
---
--- For 1:1 mixed reads and writes into the same row it is around 88MB/s 
--- For reads or wries to the same it is can be as high as 184MB/s 
-----------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -43,20 +16,23 @@ entity SDRAM_Controller is
 
       -- Interface to issue reads or write data
       cmd_wr            : in    std_logic;          
-      cmd_enable        : in    std_logic;          
+      cmd_rd            : in    std_logic;          
       cmd_address       : in    sdram_AddrType;     
-      cmd_dataIn        : in    sdram_DataType;     
-                                                  
+      cmd_wr_accepted   : out   std_logic;          
+      cmd_rd_accepted   : out   std_logic;          
       cmd_done          : out   std_logic;          
+
+      cmd_dataIn        : in    sdram_DataType;
+      
       cmd_dataOut       : out   sdram_phy_DataType;
       cmd_dataOutReady  : out   std_logic;         
       
-      intializing       : out   std_logic;
+      initializing      : out   std_logic;
 
       -- SDRAM signals 
       sdram_clk         : out   std_logic;
       sdram_cke         : out   std_logic;
-      sdram_cs          : out   std_logic;
+      sdram_cs_n        : out   std_logic;
       sdram_ras_n       : out   std_logic;
       sdram_cas_n       : out   std_logic;
       sdram_we_n        : out   std_logic;
@@ -82,7 +58,7 @@ architecture Behavioral of SDRAM_Controller is
    ------------------------------------------------------------------
    attribute IOB : string;
    attribute IOB of sdram_cke       : signal is "true";
-   attribute IOB of sdram_cs        : signal is "true";
+   attribute IOB of sdram_cs_n      : signal is "true";
    attribute IOB of sdram_ras_n     : signal is "true";
    attribute IOB of sdram_cas_n     : signal is "true";
    attribute IOB of sdram_we_n      : signal is "true";
@@ -92,9 +68,22 @@ architecture Behavioral of SDRAM_Controller is
    attribute IOB of sdram_dataOut   : signal is "true";
    attribute IOB of sdram_dataIn    : signal is "true";
 
-   constant startup_cycles     : natural := 10100; -- 100us, plus a little more
-   constant cycles_per_refresh : natural := (64000 * 100)/4196 - 1;
+   signal   refresh_cycle_counter   : unsigned(9 downto 0); -- 0 - 1023 to allow pending and forced refresh
+   signal   initialisation_counter  : unsigned(4 downto 0);  -- 0 - 31
 
+--   constant cycles_per_refresh      : unsigned(9 downto 0) := to_unsigned(511, refresh_cycle_counter'length);   -- 8192 refresh cycles every 64 ms (rounded down) @100 MHz
+--   constant initialisation_factor   : unsigned(4 downto 0) := to_unsigned(24,  initialisation_counter'length);  -- 20 refresh cycles >= 100us initialisation time @100 MHz
+  
+   -- Indicate the need to refresh when the counter is half-expired,
+   -- Force a refresh when the counter is expired
+   signal pending_refresh : std_logic;
+   signal forcing_refresh : std_logic;
+
+   constant precharge_count         : natural := 20;
+   constant refresh1_count          : natural := precharge_count+1;
+   constant refresh2_count          : natural := refresh1_count + 1;
+   constant mode_reg_count          : natural := refresh2_count + 1;
+   
    -- From page 37 of MT48LC16M16A2 datasheet
    -- Name (Function)       CS# RAS# CAS# WE# DQM  Addr    Data
    -- COMMAND INHIBIT (NOP)  H   X    X    X   X     X       X
@@ -145,36 +134,31 @@ architecture Behavioral of SDRAM_Controller is
    -- Latency is 2, don't use burst
    constant MODE_REG        : sdram_phy_AddrType := CAS_2 or BURST_NONE;
    
-   type StateType is (s_startup,
-                      s_refresh, 
-                      s_idle_in_5, s_idle_in_4, s_idle_in_3, s_idle_in_2, s_idle_in_1,
-                      s_idle,
-                      s_active, s_open_in_1,
-                      s_write,  s_write_exit,
-                      s_read,   s_read_exit,  
-                      s_precharge
-                      );
+   type StateType is (
+      s_startup,
+      s_refresh, 
+      s_idle_in_5, s_idle_in_4, s_idle_in_3, s_idle_in_2, s_idle_in_1,
+      s_idle,
+      s_active, s_active1, s_active2, 
+      s_read,  s_read_exit,
+      s_write, s_write_exit1, s_write_exit2,
+      s_precharge
+      );
+      
+   signal state, nextState : StateType;
 
-   signal state           : StateType;
    attribute FSM_ENCODING : string;
    attribute FSM_ENCODING of state : signal is "ONE-HOT";
    
    -- Dual purpose counter, it counts up during the startup phase, then is used to trigger refreshes.
-   constant startup_refresh_max   : unsigned(13 downto 0) := (others => '1');  
-   constant startup_reset_value   : unsigned(13 downto 0) := startup_refresh_max-to_unsigned(startup_cycles,14);
-   signal   startup_refresh_count : unsigned(13 downto 0) := startup_reset_value;
-
-   -- Indicate the need to refresh when the counter is 2048,
-   -- Force a refresh when the counter is 4096 - (if a refresh is forced, 
-   -- multiple refreshes will be forced until the counter is below 2048)
-   alias pending_refresh          : std_logic is startup_refresh_count(11);
-   alias forcing_refresh          : std_logic is startup_refresh_count(12);
+   --constant startup_refresh_max   : unsigned(13 downto 0) := (others => '1');  
+   --constant startup_reset_value   : unsigned(13 downto 0) := startup_refresh_max-to_unsigned(startup_cycles, startup_reset_value'width);
 
    --  2  2  2  2  1  1  1  1  1  1  1  1  1  
    --  3  2  1  0  9  8  7  6  5  4  3  2  1  0  9  8  7  6  5  4  3  2  1  0  
-   -- +------------------------------------+-----+--------------------------+
-   -- |            Row Address             | Bank|      Column Address      | Logical Address
-   -- +------------------------------------+-----+--------------------------+
+   -- +-------------------------------------+-----+--------------------------+
+   -- |            Row Address              | Bank|      Column Address      | Logical Address
+   -- +-------------------------------------+-----+--------------------------+
    --
    --               B  B     A  A  A  A  A  A  A  A  A  A  A  A  A  
    --                        1  1  1 
@@ -202,9 +186,13 @@ architecture Behavioral of SDRAM_Controller is
    alias  addr_bank            : sdram_phy_BankSelType         is cmd_address(start_of_row-1   downto start_of_bank);
    alias  addr_row             : std_logic_vector(12 downto 0) is cmd_address(cmd_address'left downto start_of_row);
    
-   alias  sdram_col_address    : std_logic_vector is sdram_addr(addr_col'range);
-   alias  sdram_row_address    : std_logic_vector is sdram_addr(addr_row'range);
-   alias  sdram_precharge      : std_logic        is sdram_addr(10);
+   signal sdram_dqm_sm         : sdram_phy_ByteSelType;
+   signal sdram_addr_sm        : sdram_phy_AddrType;
+   signal sdram_ba_sm          : sdram_phy_BankSelType;
+
+   alias  sdram_col_address_sm : std_logic_vector is sdram_addr_sm(addr_col'range);
+   alias  sdram_row_address_sm : std_logic_vector is sdram_addr_sm(addr_row'range);
+   alias  sdram_precharge_sm   : std_logic        is sdram_addr_sm(10);
    signal transaction_request  : std_logic;
     
    -- Signals to hold the last transaction to allow detection of bank and row changes
@@ -218,10 +206,13 @@ architecture Behavioral of SDRAM_Controller is
 
    -- signal to control the Hi-Z state of the DQ bus
    signal sdram_dq_hiz         : std_logic;
+   signal sdram_dq_hiz_sm      : std_logic;
 
    -- Shift-register to indicate when to read the value from of the SDRAM data bus
    constant READ_LATENCY       : natural := 2;   
    signal data_ready_delay     : std_logic_vector(READ_LATENCY-1 downto 0);   
+   
+   signal restartCounters      : std_logic;
    
    -------------------------------------------------------------
    -- Maps readable command names (for debug) to physical values
@@ -246,7 +237,6 @@ begin
 -- Forward the SDRAM clock to the SDRAM chip - 180 degress 
 -- out of phase with the control signals (ensuring setup and hold)
 --------------------------------------------------------------------
-
 sdram_clk_forward : ODDR2
    generic map(
       DDR_ALIGNMENT  => "NONE", 
@@ -264,299 +254,263 @@ sdram_clk_forward : ODDR2
       Q  => sdram_clk 
    );
 
-   sdram_cs     <= cmd(command)(3);
-   sdram_ras_n  <= cmd(command)(2);
-   sdram_cas_n  <= cmd(command)(1);
-   sdram_we_n   <= cmd(command)(0);
-   
-   sdram_data <= sdram_dataOut when sdram_dq_hiz = '1' else (others => 'Z');
+   forcing_refresh <= refresh_cycle_counter(refresh_cycle_counter'left) and 
+                      refresh_cycle_counter(6);
 
-   transaction_request  <= cmd_enable;
+   pending_refresh <= refresh_cycle_counter(refresh_cycle_counter'left) or 
+                      refresh_cycle_counter(refresh_cycle_counter'left-1);
+
+Counter_Sync_proc:
+process (clock_100MHz)
+begin
+   if rising_edge(clock_100MHz) then
+      if ((reset = '1') or (restartCounters = '1')) then
+         refresh_cycle_counter   <= (others => '0');
+         initialisation_counter  <= (others => '0');
+      else
+         if (forcing_refresh = '1') then
+            refresh_cycle_counter   <= (others => '0');
+            initialisation_counter  <= initialisation_counter + 1;
+         else
+            refresh_cycle_counter   <= refresh_cycle_counter + 1;
+         end if;
+      end if;
+   end if;
+end process;
+
+Sdram_Sync_proc:
+process (clock_100MHz)
+begin
+   if rising_edge(clock_100MHz) then
+      if (reset = '1') then
+         state                 <= s_startup;
+         sdram_cs_n            <= '1';
+         sdram_ras_n           <= '1';
+         sdram_cas_n           <= '1';
+         sdram_we_n            <= '1';
+         sdram_addr            <= (others => '0');
+         sdram_ba              <= (others => '0');
+         sdram_dqm             <= (others => '0');
+         sdram_dq_hiz          <= '1';
+         sdram_dataOut         <= (others => '0');
+         data_ready_delay      <= (others => '0');
+         cmd_dataOut           <= (others => '0');
+         cmd_dataOutReady      <= '0';
+      else
+         state         <= nextState;
+         sdram_cs_n    <= cmd(command)(3);
+         sdram_ras_n   <= cmd(command)(2);
+         sdram_cas_n   <= cmd(command)(1);
+         sdram_we_n    <= cmd(command)(0);
+         sdram_addr    <= sdram_addr_sm;
+         sdram_ba      <= sdram_ba_sm;
+         sdram_dqm     <= sdram_dqm_sm;
+         
+         sdram_dq_hiz  <= sdram_dq_hiz_sm;
+         sdram_dataOut <= cmd_dataIn;
+         
+         if (state = s_active) then
+            last_row             <= addr_row;
+            last_bank            <= addr_bank;
+         end if;
+         ----------------------------------------------------------------------------
+         -- Update shift registers used to choose when to present data from memory
+         ----------------------------------------------------------------------------
+         data_ready_delay  <= '0' & data_ready_delay(data_ready_delay'left downto 1);
+         if (state = s_read) then
+            data_ready_delay(data_ready_delay'left) <= '1'; 
+         end if;
+         
+         if (data_ready_delay(0) = '1') then
+            cmd_dataOut      <= sdram_data;
+            cmd_dataOutReady <= '1';
+         else
+            cmd_dataOutReady <= '0';
+         end if;         
+      end if;
+   end if;
+end process;
+
+   sdram_data <= sdram_dataOut when (sdram_dq_hiz = '0') else (others => 'Z');
+   
+   transaction_request  <= cmd_wr or cmd_rd;
    back_to_back_request <= '1' when ((transaction_request = '1') and (last_bank = addr_bank) and (last_row = addr_row)) else '0';
    cmd_done             <= ready_for_new and back_to_back_request;
 
 main_proc:
-   process(clock_100MHz) 
+   process(
+      state, initialisation_counter, refresh_cycle_counter, transaction_request, 
+      cmd_address, cmd_wr, cmd_rd, back_to_back_request, cmd_datain, forcing_refresh, pending_refresh) 
       
    begin
-      if rising_edge(clock_100MHz) then
       
          ------------------------------------------------
          -- Default is to do nothing
          ------------------------------------------------
          command           <= C_NOP;
-         sdram_addr        <= (others => '0');
-         sdram_ba          <= (others => '0');
-         sdram_dqm         <= (others => '1');
+         sdram_addr_sm     <= (others => '0');
+         sdram_ba_sm       <= (others => '0');
+         sdram_dqm_sm      <= (others => '1');
          ready_for_new     <= '0';
-         sdram_dq_hiz      <= '1';
-         intializing       <= '0';
-         
-         ------------------------------------------------
-         -- Countdown for initialisation & refresh
-         ------------------------------------------------
-         startup_refresh_count <= startup_refresh_count+1;
+         sdram_dq_hiz_sm   <= '1';
+         initializing      <= '0';
+         cmd_rd_accepted   <= '0';
+         cmd_wr_accepted   <= '0';
+         restartCounters   <= '0';
+         nextState         <= state;
+         sdram_cke         <= '1';
 
-         ----------------------------------------------------------------------------
-         -- Update shift registers used to choose when to present data from memory
-         ----------------------------------------------------------------------------
-         data_ready_delay  <= '0' & data_ready_delay(data_ready_delay'left downto 1);
-         
-         -------------------------------------------------------------------
-         -- If we are ready for a new tranasction and one is being presented
-         -- then accept it. Also remember what we are reading or writing,
-         -- and if it can be back-to-backed with the last transaction
-         -------------------------------------------------------------------
---         if (ready_for_new = '1') then
---            last_row         <= addr_row;
---            last_bank        <= addr_bank;
---            last_col         <= addr_col;
---            last_wr          <= cmd_wr; 
---            last_data_in     <= cmd_dataIn;
---         end if;
-         ------------------------------------------------
-         -- Handle the data coming back from the 
-         -- SDRAM for the Read transaction
-         ------------------------------------------------
-         sdram_dataIn <= sdram_data;
-         if (data_ready_delay(0) = '1') then
-            cmd_dataOut       <= sdram_dataIn;
-            cmd_dataOutReady <= '1';
-         else
-            cmd_dataOutReady <= '0';
-         end if;
-         
          case state is 
             when s_startup =>
                ------------------------------------------------------------------------
                -- This is the initial startup state, where we wait for at least 100us
-               -- before starting the start sequence
-               -- 
+               -- The data sheet is somewhat confusing.  It says to have CKE low
+               -- initially and then sometime within the 100us bring CKE high. Elsewhere
+               -- it says CKE may be tied high!  In practice I think is OK to set CKE high
+               -- at the start of the initialisation sequence i.e. after clock stable.
+               -- This agrees with Figure 36.
                -- The initialisation is sequence is 
-               --  * de-assert sdram_cke
-               --  * 100us wait, 
-               --  * assert sdram_cke
-               --  * wait at least one cycle, 
-               --  * PRECHARGE
-               --  * wait 2 cycles
-               --  * REFRESH, 
-               --  * tREF wait
-               --  * REFRESH, 
-               --  * tREF wait 
-               --  * LOAD_MODE_REG 
+               --  * Initially de-assert sdram_cke (=low)
+               --  * Assert sdram_cke (=high)
+               --  * 100us wait while doing 1 or more NOPs
+               --  * PRECHARGE ALL command
+               --  * Wait tRP doing NOPs. Banks will complete Pre-charge (  wait 2 cycles)
+               --  * REFRESH command 
+               --  * Wait tRFC doing NOPs. 
+               --  * REFRESH command 
+               --  * Wait tRFC doing NOPs. 
+               --  * LOAD_MODE_REG command
                --  * 2 cycles wait
                ------------------------------------------------------------------------
-               sdram_cke   <= '1';
-               intializing <= '1';   
+               initializing <= '1';   
                
                -- All the commands during the startup are NOPS, except these
-               if (startup_refresh_count) = (startup_refresh_max-31) then      
+               if (initialisation_counter = precharge_count) and (forcing_refresh = '1') then      
                   -- Ensure all rows are closed
                   command         <= C_PRECHARGE;
-                  sdram_precharge <= '1';  -- all banks
-                  sdram_ba        <= (others => '0');
-               elsif (startup_refresh_count = startup_refresh_max-23) then   
-                  -- These refreshes need to be at least tREF (66ns) apart
+                  sdram_precharge_sm <= '1';  -- all banks
+                  sdram_ba_sm     <= (others => '0');
+               elsif (initialisation_counter = refresh1_count) and (forcing_refresh = '1') then   
+                  -- Refresh cycle
                   command         <= C_REFRESH;
-               elsif (startup_refresh_count = startup_refresh_max-15) then
+               elsif (initialisation_counter = refresh2_count) and (forcing_refresh = '1') then
+                  -- Refresh cycle
                   command         <= C_REFRESH;
-               elsif (startup_refresh_count = startup_refresh_max-7) then    
+               elsif (initialisation_counter = mode_reg_count) then    
                   -- Now load the mode register
                   command         <= C_LOAD_MODE_REG;
-                  sdram_addr      <= MODE_REG;
-               end if;
-
-               ------------------------------------------------------
-               -- if startup is complete then go into idle mode,
-               -- get prepared to accept a new command, and schedule
-               -- the first refresh cycle
-               ------------------------------------------------------
-               if (startup_refresh_count = 0) then
-                  state                 <= s_idle;
-                  startup_refresh_count <= to_unsigned(2048 - cycles_per_refresh+1,14);
+                  sdram_addr_sm   <= MODE_REG;
+                  restartCounters <= '1';
+                  nextState       <= s_idle_in_2;
                end if;
                
             when s_refresh => 
-               state <= s_idle_in_5;
+               command         <= C_REFRESH;
+               restartCounters <= '1';
+               nextState       <= s_idle_in_5;
             
             when s_idle_in_5 => 
-               state <= s_idle_in_4;
+               nextState <= s_idle_in_4;
             
             when s_idle_in_4 => 
-               state <= s_idle_in_3;
+               nextState <= s_idle_in_3;
             
             when s_idle_in_3 => 
-               state <= s_idle_in_2;
+               nextState <= s_idle_in_2;
             
             when s_idle_in_2 => 
-               state <= s_idle_in_1;
+               nextState <= s_idle_in_1;
             
             when s_idle_in_1 => 
-               state <= s_idle;
-               -- Accept new transactions in anticipation of idle
---               ready_for_new <= not transaction_request;
+               nextState <= s_idle;
 
             when s_idle =>
-               -- Accept new transactions while idle
---               ready_for_new <= not transaction_request;
-
                -- Priority is to issue a refresh if one is outstanding
-               if (pending_refresh = '1') or (forcing_refresh = '1') then
+               if (pending_refresh = '1') then
                  ------------------------------------------------------------------------
                   -- Start the refresh cycle. 
                   -- This tasks tRFC (66ns), so 6 idle cycles are needed @ 100MHz
                   ------------------------------------------------------------------------
-                  state                 <= s_refresh;
-                  command               <= C_REFRESH;
-                  startup_refresh_count <= startup_refresh_count - cycles_per_refresh+1;
+                  nextState <= s_refresh;
                elsif (transaction_request = '1') then
                   --------------------------------
                   -- Start the read or write cycle. 
                   -- First task is to open the row
                   --------------------------------
-                  state              <= s_active;
-                  command            <= C_ACTIVE;
-                  sdram_row_address  <= addr_row; 
-                  sdram_ba           <= addr_bank;
+                  nextState <= s_active;
                end if;               
                
             --------------------------------------------
             -- Opening the row ready for reads or writes
             --------------------------------------------
             when s_active => 
-               ready_for_new    <= '1';
-               state            <= s_open_in_1;
-               last_row         <= addr_row;
-               last_bank        <= addr_bank;
-
-            when s_open_in_1 =>
-               -- Row will be open on next clock_100MHz
-               ready_for_new    <= '1';
+               nextState            <= s_active1;
+               command              <= C_ACTIVE;
+               sdram_row_address_sm <= addr_row; 
+               sdram_ba_sm          <= addr_bank;
+               
+            when s_active1 =>
+               nextState         <= s_active2;
+            
+            when s_active2 => 
                if (cmd_wr = '1') then
-                  state              <= s_write;
-                  command            <= C_WRITE;
-                  sdram_dqm          <= (others => '0');
-                  sdram_dq_hiz       <= '0';
-                  sdram_ba           <= addr_bank;
-                  sdram_col_address  <= addr_col; 
-                  sdram_dataOut      <= cmd_dataIn;                 
+                  nextState         <= s_write;
                else
-                  state              <= s_read;
-                  command            <= C_READ;
-                  sdram_dqm          <= (others => '0');
-                  sdram_ba           <= addr_bank;
-                  sdram_col_address  <= addr_col; 
+                  nextState         <= s_read;
                end if;
 
             ----------------------------------
             -- Processing the read transaction
             ----------------------------------
             when s_read =>
-               state         <= s_read_exit;
-               command       <= C_NOP;
+               command              <= C_READ;
+               sdram_dqm_sm         <= (others => '0');
+               sdram_ba_sm          <= addr_bank;
+               sdram_col_address_sm <= addr_col; 
 
-               -- Schedule reading the data values off the bus
-               data_ready_delay(data_ready_delay'left) <= '1';
-                              
-               if ((forcing_refresh = '0') and (back_to_back_request = '1') and (cmd_wr = '0')) then
-                  state              <= s_read;
-                  command            <= C_READ;
-                  sdram_dqm          <= (others => '0');
-                  sdram_ba           <= addr_bank;
-                  sdram_col_address  <= addr_col; 
-                  -- Accept new transactions
-                  ready_for_new      <= '1';
+               -- Accept new transactions
+               ready_for_new        <= '1';
+
+               if ((forcing_refresh = '1') or (back_to_back_request = '0') or
+                   (cmd_wr = '1') or (cmd_rd = '0')) then
+                  nextState <= s_read_exit;
                end if;
             
             when s_read_exit => 
-               state        <= s_precharge;
-               command      <= C_PRECHARGE;
-               
-               -- Can we do back-to-back read?
-               if (forcing_refresh = '0') and (back_to_back_request = '1') then
-                  if (cmd_wr = '0') then
-                     state              <= s_read;
-                     command            <= C_READ;
-                     sdram_dqm          <= (others => '0');
-                     sdram_ba           <= addr_bank;
-                     sdram_col_address  <= addr_col; 
-                     -- Accept new transactions
-                     ready_for_new      <= '1';
-                  else
-                     state     <= s_active;
-                  end if;
-               end if;
-
+               nextState    <= s_precharge;
+ 
             ------------------------------------------------------------------
             -- Processing the write transaction
             -------------------------------------------------------------------
-
             when s_write =>
-               state        <= s_write_exit;
-               command      <= C_NOP;
+               nextState <= s_write_exit1;
 
-               if (forcing_refresh = '0') and (back_to_back_request = '1') then
-                  if (cmd_wr = '1') then
-                     -- Back-to-back write?
-                     state              <= s_write;
-                     command            <= C_WRITE;
-                     sdram_dqm          <= (others => '0');
-                     sdram_dq_hiz       <= '0';
-                     sdram_ba           <= addr_bank;
-                     sdram_col_address  <= addr_col; 
-                     sdram_dataOut      <= cmd_dataIn;
-                     -- Accept new transactions
-                     ready_for_new      <= '1';
-                  else
-                     -- Write-to-read switch?
-                     state              <= s_read;
-                     command            <= C_READ;
-                     sdram_dqm          <= (others => '0');
-                     sdram_ba           <= addr_bank;
-                     sdram_col_address  <= addr_col; 
+               if ((forcing_refresh = '0') and (back_to_back_request = '1') and
+                   (cmd_wr = '1')) then
+                  command              <= C_WRITE;
+                  sdram_col_address_sm <= addr_col; 
+                  sdram_dq_hiz_sm      <= '0';
+                  sdram_dqm_sm         <= (others => '0');
+                  sdram_ba_sm          <= addr_bank;
+                  cmd_wr_accepted      <= '1'; -- write will complete in next cycle             
+                  nextState            <= s_write;
                end if;
-            end if;
-                        
-            when s_write_exit =>  
-               -- Must wait tRDL before precharge
-               state       <= s_precharge;
-               command     <= C_PRECHARGE;
-               
-               -- Back to back transaction?
-               if (forcing_refresh = '0') and (back_to_back_request = '1') then
-                  if (cmd_wr = '1') then
-                     -- Back to write?
-                     state              <= s_write;
-                     command            <= C_WRITE;
-                     sdram_dqm          <= (others => '0');
-                     sdram_dq_hiz       <= '0';
-                     sdram_ba           <= addr_bank;
-                     sdram_col_address  <= addr_col; 
-                     sdram_dataOut      <= cmd_dataIn;
-                  else
-                     -- Write-to-read switch?
-                     state              <= s_read;
-                     command            <= C_READ;
-                     sdram_dqm          <= (others => '0');
-                     sdram_ba           <= addr_bank;
-                     sdram_col_address  <= addr_col; 
-                  end if;
-               end if;
+
+            when s_write_exit1 =>  
+               -- Must wait tRDL before precharge (2 Cy)
+               nextState   <= s_write_exit2;
+
+            when s_write_exit2 =>  
+               -- Must wait tRDL before precharge (2 Cy)
+               nextState   <= s_precharge;
 
             -------------------------------------------------------------------
             -- Closing the row off (this closes all banks)
             -------------------------------------------------------------------
             when s_precharge =>
-               state           <= s_idle;
-               command         <= C_NOP;
+               command     <= C_PRECHARGE;
+               nextState   <= s_idle_in_1;
                
          end case;
-
-         if (reset = '1') then  -- Sync reset
-            state                 <= s_startup;
-            ready_for_new         <= '0';
-            startup_refresh_count <= startup_reset_value;
-         end if;
-      end if;      
    end process;
 end Behavioral;

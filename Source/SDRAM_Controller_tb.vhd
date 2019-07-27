@@ -14,8 +14,8 @@ architecture behavior of SDRAM_controller_tb is
    signal clock_100MHz     : std_logic := '0';
    signal clock_100MHz_n   : std_logic := '1';
    signal reset            : std_logic := '0';
-   signal cmd_enable       : std_logic := '0';
    signal cmd_wr           : std_logic := '0';
+   signal cmd_rd           : std_logic := '0';
    signal cmd_address      : sdram_AddrType := (others => '0');
    signal cmd_dataIn       : sdram_DataType := (others => '0');
 
@@ -24,12 +24,12 @@ architecture behavior of SDRAM_controller_tb is
 
  	-- Outputs
    signal cmd_done         : std_logic;
-   signal intializing      : std_logic;
+   signal initializing      : std_logic;
    signal cmd_dataOut      : sdram_phy_DataType;
    signal cmd_dataOutReady : std_logic;
    signal sdram_clk        : std_logic;
    signal sdram_cke        : std_logic;
-   signal sdram_cs         : std_logic;
+   signal sdram_cs_n         : std_logic;
    signal sdram_ras_n      : std_logic;
    signal sdram_cas_n      : std_logic;
    signal sdram_we_n       : std_logic;
@@ -52,18 +52,22 @@ begin
           clock_100MHz     => clock_100MHz,
           clock_100MHz_n   => clock_100MHz_n,
           reset            => reset,
-          cmd_done         => cmd_done,
-          cmd_enable       => cmd_enable,
+          
           cmd_wr           => cmd_wr,
+          cmd_rd           => cmd_rd,
           cmd_address      => cmd_address,
+          cmd_done         => cmd_done,
+          
           cmd_dataIn       => cmd_dataIn,
+          
           cmd_dataOut      => cmd_dataOut,
           cmd_dataOutReady => cmd_dataOutReady,
-          intializing      => intializing,
+          
+          initializing     => initializing,
           
           sdram_clk        => sdram_clk,
           sdram_cke        => sdram_cke,
-          sdram_cs         => sdram_cs,
+          sdram_cs_n         => sdram_cs_n,
           sdram_ras_n      => sdram_ras_n,
           sdram_cas_n      => sdram_cas_n,
           sdram_we_n       => sdram_we_n,
@@ -90,7 +94,7 @@ begin
    end process; 
   
    sdramProc:
-   process(sdram_we_n, sdram_dqm, sdram_clk, sdram_cke, sdram_cs)
+   process(sdram_we_n, sdram_dqm, sdram_clk, sdram_cke, sdram_cs_n)
       constant latency : natural := 2;
       
       type readQueueType is array(latency-1 downto 0) of sdram_phy_DataType;
@@ -102,7 +106,7 @@ begin
       constant invalidData             : sdram_phy_DataType                         := (others => 'X');
       
    begin
-      command := sdram_cs&sdram_ras_n&sdram_cas_n&sdram_we_n;
+      command := sdram_cs_n&sdram_ras_n&sdram_cas_n&sdram_we_n;
       
       if rising_edge(sdram_clk) then
          readQueueDataAvailable := '0'&readQueueDataAvailable(readQueueDataAvailable'left downto 1);
@@ -128,27 +132,23 @@ begin
    begin
       cmd_address <= addr;
       cmd_dataIn  <= data;
-      cmd_enable  <= '1';
       cmd_wr      <= '1';
       wait until rising_edge(clock_100MHz) and (cmd_done = '1');
       wait for 1 ns;
       cmd_address <= (others => 'X');
       cmd_dataIn  <= (others => 'X');
-      cmd_enable  <= '0';
       cmd_wr      <= 'X';
    end procedure;
        
    procedure read(addr : sdram_AddrType; data : out sdram_DataType) is
    begin
       cmd_address <= addr;
-      cmd_enable  <= '1';
-      cmd_wr      <= '0';
+      cmd_rd      <= '1';
       wait until rising_edge(clock_100MHz) and (cmd_done = '1');
       wait for 1 ns;
       cmd_address <= (others => 'X');
       cmd_dataIn  <= (others => 'X');
-      cmd_enable  <= '0';
-      cmd_wr      <= 'X';
+      cmd_rd      <= '0';
    end procedure;
        
    variable readDatareadData : sdram_DataType;
@@ -162,25 +162,25 @@ begin
       wait for clock_period;
 
       wait until rising_edge(clock_100MHz);
-      if (intializing = '1') then
-         wait until intializing = '0';
+      if (initializing = '1') then
+         wait until initializing = '0';
       end if;
       
-      status <= "ft2232h_wr A1 ";
+      status <= "wr A1 ";
       write(x"031010", x"1234");
-      status <= "ft2232h_wr A2 ";
+      status <= "wr A2 ";
       write(x"031012", x"5678");
-      status <= "ft2232h_wr A3 ";
+      status <= "wr A3 ";
       write(x"031014", x"9ABC");
-      status <= "ft2232h_wr A4 ";
+      status <= "wr A4 ";
       write(x"031016", x"DEF0");
-      status <= "ft2232h_wr B1 ";
+      status <= "wr B1 ";
       write(x"041010", x"9ABC");
-      status <= "ft2232h_wr B2 ";
+      status <= "wr B2 ";
       write(x"041012", x"DEF0");
-      status <= "ft2232h_wr C1 ";
+      status <= "wr C1 ";
       write(x"061010", x"9876");
-      status <= "ft2232h_wr C2 ";
+      status <= "wr C2 ";
       write(x"071010", x"5432");
       
       status <= "RD A1 ";
