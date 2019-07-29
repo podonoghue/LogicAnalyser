@@ -75,7 +75,7 @@ NET ft2232h_data(5) LOC="P119" | IOSTANDARD=LVTTL;                              
 NET ft2232h_data(6) LOC="P120" | IOSTANDARD=LVTTL;                                # C6
 NET ft2232h_data(7) LOC="P121" | IOSTANDARD=LVTTL;                                # C7
 #NET C(8)           LOC="P123" | IOSTANDARD=LVTTL;                                # C8
-NET sampling        LOC="P124" | IOSTANDARD=LVTTL;                                # C9
+#NET sampling       LOC="P124" | IOSTANDARD=LVTTL;                                # C9
 NET reset_n         LOC="P126" | IOSTANDARD=LVTTL;                                # C10
 NET ft2232h_siwu_n  LOC="P127" | IOSTANDARD=LVTTL;                                # C11
 NET ft2232h_rxf_n   LOC="P131" | IOSTANDARD=LVTTL;                                # C12
@@ -119,7 +119,7 @@ NET sdram_ba(1)     LOC="P142" | IOSTANDARD=LVTTL;                              
 NET sdram_we_n      LOC="P6"   | IOSTANDARD=LVTTL;                                # SDRAM_nWE
 NET sdram_cas_n     LOC="P5"   | IOSTANDARD=LVTTL;                                # SDRAM_nCAS
 NET sdram_ras_n     LOC="P2"   | IOSTANDARD=LVTTL;                                # SDRAM_nRAS
-NET sdram_cs        LOC="P1"   | IOSTANDARD=LVTTL;                                # sdram_cs
+NET sdram_cs_n      LOC="P1"   | IOSTANDARD=LVTTL;                                # sdram_cs
 NET sdram_clk       LOC="P32"  | IOSTANDARD=LVTTL;                                # sdram_clk
 NET sdram_cke       LOC="P33"  | IOSTANDARD=LVTTL;                                # sdram_cke
 

@@ -11,37 +11,43 @@ end entity;
 architecture behavior of SDRAM_controller_tb is 
 
    -- Inputs
-   signal clock_100MHz     : std_logic := '0';
-   signal clock_100MHz_n   : std_logic := '1';
-   signal reset            : std_logic := '0';
-   signal cmd_wr           : std_logic := '0';
-   signal cmd_rd           : std_logic := '0';
-   signal cmd_address      : sdram_AddrType := (others => '0');
-   signal cmd_dataIn       : sdram_DataType := (others => '0');
+   signal clock_100MHz      : std_logic := '0';
+   signal clock_100MHz_n    : std_logic := '1';
+   signal reset             : std_logic := '0';
+   
+   signal cmd_wr            : std_logic := '0';
+   signal cmd_wr_address    : sdram_AddrType := (others => '0');
+   signal cmd_wr_data       : sdram_DataType := (others => '0');
+   signal cmd_wr_accepted   : std_logic;
+
+   signal cmd_rd            : std_logic := '0';
+   signal cmd_rd_address    : sdram_AddrType := (others => '0');
+   signal cmd_rd_data       : sdram_DataType := (others => '0');
+   signal cmd_rd_accepted   : std_logic;
+   signal cmd_rd_data_ready : std_logic;
 
 	-- Bidirs
-   signal sdram_data       : sdram_phy_DataType := (others => 'Z');
+   signal sdram_data        : sdram_phy_DataType := (others => 'Z');
 
  	-- Outputs
-   signal cmd_done         : std_logic;
+   signal cmd_done          : std_logic;
    signal initializing      : std_logic;
-   signal cmd_dataOut      : sdram_phy_DataType;
-   signal cmd_dataOutReady : std_logic;
-   signal sdram_clk        : std_logic;
-   signal sdram_cke        : std_logic;
-   signal sdram_cs_n         : std_logic;
-   signal sdram_ras_n      : std_logic;
-   signal sdram_cas_n      : std_logic;
-   signal sdram_we_n       : std_logic;
-   signal sdram_dqm        : sdram_phy_ByteSelType;
-   signal sdram_addr       : sdram_phy_AddrType;
-   signal sdram_ba         : sdram_phy_BankSelType;
+   
+   signal sdram_clk         : std_logic;
+   signal sdram_cke         : std_logic;
+   signal sdram_cs_n        : std_logic;
+   signal sdram_ras_n       : std_logic;
+   signal sdram_cas_n       : std_logic;
+   signal sdram_we_n        : std_logic;
+   signal sdram_dqm         : sdram_phy_ByteSelType;
+   signal sdram_addr        : sdram_phy_AddrType;
+   signal sdram_ba          : sdram_phy_BankSelType;
 
    -- Clock period definitions
-   constant clock_period   : time     := 10 ns;
-   signal   complete       : boolean  := false;
+   constant clock_period    : time     := 10 ns;
+   signal   complete        : boolean  := false;
  
-   signal   status : string (1 to 6);
+   signal   status          : string (1 to 6);
 
 begin
  
@@ -49,32 +55,33 @@ begin
    uut: 
    entity work.SDRAM_controller 
       port map (
-          clock_100MHz     => clock_100MHz,
-          clock_100MHz_n   => clock_100MHz_n,
-          reset            => reset,
+          clock_100MHz      => clock_100MHz,
+          clock_100MHz_n    => clock_100MHz_n,
+          reset             => reset,
           
-          cmd_wr           => cmd_wr,
-          cmd_rd           => cmd_rd,
-          cmd_address      => cmd_address,
-          cmd_done         => cmd_done,
+          cmd_wr            => cmd_wr,
+          cmd_wr_data       => cmd_wr_data,
+          cmd_wr_address    => cmd_wr_address,          
+          cmd_wr_accepted   => cmd_wr_accepted,
           
-          cmd_dataIn       => cmd_dataIn,
+          cmd_rd            => cmd_rd,
+          cmd_rd_data       => cmd_rd_data,
+          cmd_rd_address    => cmd_rd_address,          
+          cmd_rd_accepted   => cmd_rd_accepted,
+          cmd_rd_data_ready => cmd_rd_data_ready,
           
-          cmd_dataOut      => cmd_dataOut,
-          cmd_dataOutReady => cmd_dataOutReady,
+          initializing      => initializing,
           
-          initializing     => initializing,
-          
-          sdram_clk        => sdram_clk,
-          sdram_cke        => sdram_cke,
-          sdram_cs_n         => sdram_cs_n,
-          sdram_ras_n      => sdram_ras_n,
-          sdram_cas_n      => sdram_cas_n,
-          sdram_we_n       => sdram_we_n,
-          sdram_dqm        => sdram_dqm,
-          sdram_addr       => sdram_addr,
-          sdram_ba         => sdram_ba,
-          sdram_data       => sdram_data
+          sdram_clk         => sdram_clk,
+          sdram_cke         => sdram_cke,
+          sdram_cs_n        => sdram_cs_n,
+          sdram_ras_n       => sdram_ras_n,
+          sdram_cas_n       => sdram_cas_n,
+          sdram_we_n        => sdram_we_n,
+          sdram_dqm         => sdram_dqm,
+          sdram_addr        => sdram_addr,
+          sdram_ba          => sdram_ba,
+          sdram_data        => sdram_data
       );
 
    clock_100MHz_n <= clock_100MHz;
@@ -130,24 +137,24 @@ begin
    
    procedure write(addr : sdram_AddrType; data : sdram_DataType) is
    begin
-      cmd_address <= addr;
-      cmd_dataIn  <= data;
+      cmd_wr_address <= addr;
+      cmd_wr_data  <= data;
       cmd_wr      <= '1';
       wait until rising_edge(clock_100MHz) and (cmd_done = '1');
       wait for 1 ns;
-      cmd_address <= (others => 'X');
-      cmd_dataIn  <= (others => 'X');
+      cmd_wr_address <= (others => 'X');
+      cmd_wr_data  <= (others => 'X');
       cmd_wr      <= 'X';
    end procedure;
        
    procedure read(addr : sdram_AddrType; data : out sdram_DataType) is
    begin
-      cmd_address <= addr;
+      cmd_rd_address <= addr;
       cmd_rd      <= '1';
       wait until rising_edge(clock_100MHz) and (cmd_done = '1');
       wait for 1 ns;
-      cmd_address <= (others => 'X');
-      cmd_dataIn  <= (others => 'X');
+      cmd_rd_address <= (others => 'X');
+      cmd_rd_data  <= (others => 'X');
       cmd_rd      <= '0';
    end procedure;
        

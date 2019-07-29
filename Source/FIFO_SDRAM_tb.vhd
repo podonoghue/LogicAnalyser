@@ -30,6 +30,12 @@ architecture behavior of fifo_sdram_tb is
    signal   sdram_data     : std_logic_vector(15 downto 0) := (others => 'Z');
    signal   initializing    : std_logic;
 
+   signal   cmd_rd             : std_logic := '0';
+   signal   cmd_rd_data        : sdram_DataType := (others => '0');
+   signal   cmd_rd_address     : sdram_AddrType := (others => '0');
+   signal   cmd_rd_accepted    : std_logic;
+   signal   cmd_rd_data_ready  : std_logic;
+
    -- clock_100MHz
    constant clock_period   : time    := 10 ns;
    signal   complete       : boolean := false;
@@ -62,7 +68,13 @@ entity work.FIFO_SDRAM
       fifo_wr_en      => fifo_wr_en,
       fifo_data_in    => fifo_data_in,
 
-      initializing      => initializing,
+      cmd_rd             => cmd_rd,            
+      cmd_rd_data        => cmd_rd_data,        
+      cmd_rd_address     => cmd_rd_address,     
+      cmd_rd_accepted    => cmd_rd_accepted,    
+      cmd_rd_data_ready  => cmd_rd_data_ready,  
+
+      initializing    => initializing,
 
       sdram_clk       => sdram_clk,
       sdram_cke       => sdram_cke,
@@ -115,6 +127,20 @@ entity work.FIFO_SDRAM
          wait for 2* clock_period;
       end procedure;
 
+   procedure read(addr : sdram_AddrType; data : out sdram_DataType) is
+   begin
+      cmd_rd_address <= addr;
+      cmd_rd         <= '1';
+      wait until rising_edge(clock_100MHz) and (cmd_rd_accepted = '1');
+      cmd_rd         <= '0';
+      wait until rising_edge(clock_100MHz) and (cmd_rd_data_ready = '1');
+      wait for 1 ns;
+      cmd_rd_address <= (others => '0');
+      data := cmd_rd_data;
+   end procedure;
+
+   variable temp : sdram_DataType;
+   
    begin
       reset <= '1';
       wait for 2 * clock_period;
@@ -126,10 +152,24 @@ entity work.FIFO_SDRAM
       wait until falling_edge(clock_100MHz);
       wait for 0.5 ns;
 
-      writeStuff(400000*32);
+      writeStuff(4000);
       --assert (fifo_full = '1');
 
+      wait for 1020 ns;
+      wait until falling_edge(clock_100MHz);
+      wait for 0.5 ns;
+      
+      writeStuff(1);
+
       wait for 240 ns;
+      
+      read(x"123456", temp);
+      wait for 100 ns;
+      read(x"000100", temp);
+      read(x"000101", temp);
+
+      wait for 100 ns;
+      
       complete <= true;
 
       wait;

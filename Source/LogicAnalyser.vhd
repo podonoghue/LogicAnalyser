@@ -21,14 +21,14 @@ entity LogicAnalyser is
       ft2232h_txe_n  : in    std_logic;   -- Tx FIFO Empty 
       ft2232h_wr_n   : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
       ft2232h_data   : inOut DataBusType; -- FIFO Data I/O
-      ft2232h_siwu_n : out   std_logic;      -- Flush USB buffer(Send Immediate / WakeUp signal)
+      ft2232h_siwu_n : out   std_logic;   -- Flush USB buffer(Send Immediate / WakeUp signal)
       
       -- Trigger logic
       sample         : in    SampleDataType;
-      armed          : out   std_logic;
-      sampling       : out   std_logic;
+      armed_o        : out   std_logic;
 
       -- SDRAM interface
+      initializing   : out   std_logic;
       sdram_clk      : out   std_logic;
       sdram_cke      : out   std_logic;
       sdram_cs_n     : out   std_logic;
@@ -54,12 +54,20 @@ architecture Behavioral of LogicAnalyser is
 
    -- SDRAM interface             
    signal cmd_ready               : std_logic; 
-   signal cmd_done                : std_logic; 
                                  
-   signal cmd_dataOut             : sdram_phy_DataType;
-   signal cmd_dataOutReady        : std_logic;
-   signal cmd_address             : sdram_AddrType;
+   signal cmd_rd                  : std_logic;
+   signal cmd_rd_data             : sdram_phy_DataType;
+   signal cmd_rd_data_ready       : std_logic;
+   signal cmd_wr_address          : sdram_AddrType;
+   signal cmd_rd_address          : sdram_AddrType;
+   signal increment_read_address  : std_logic;
+
+   constant cmd_wr_address_mid    : sdram_AddrType := (cmd_wr_address'left=>'1', others => '0');
+   constant cmd_wr_address_max    : sdram_AddrType := (5=>'1', others => '0');
       
+   signal cmd_rd_accepted         : std_logic;
+   -- signal initializing            : std_logic;
+   
    signal lastReadData            : DataBusType;
    signal lastReadDataValid       : std_logic;
    
@@ -67,112 +75,182 @@ architecture Behavioral of LogicAnalyser is
    signal dataOutTriggerBlock     : DataBusType;
    
    -- FT2232H Interface
-   signal receive_data            : DataBusType;
-   signal receive_data_st         : std_logic;
+   signal host_receive_data_request    : std_logic;
+   signal host_receive_data            : DataBusType;
+   signal host_receive_data_available  : std_logic;
 
-   signal send_data              : DataBusType;
-   signal send_data_req          : std_logic;
+   signal host_transmit_data           : DataBusType;
+   signal host_transmit_data_ready     : std_logic;
+   signal host_transmit_data_request   : std_logic;
 
-   -- Control state machine
-   type StateType is (s_cmd, s_size, s_data);
-   signal state : StateType;
+   -- Control iState machine
+   type InterfaceState is (s_cmd, s_size, s_write_control, s_lut_config, s_read_buffer, s_read_buffer_even, s_read_buffer_odd);
+   signal iState, nextIState : InterfaceState;
    
-   signal command     : DataBusType;
+   type TriggerState is (t_idle, t_armed, t_running, t_complete);
+   signal tState, nextTState : TriggerState;
    
-   signal wr_trigger_luts    : std_logic;
-   signal receive_data_ready : std_logic;
-   signal send_data_ready    : std_logic;
-   signal trigger_bus_busy   : std_logic;
-   signal triggerFound       : std_logic;
+   signal save_command            : std_logic;
+   signal clear_command           : std_logic;
+   signal command                 : AnalyserCmdType;
+                                  
+   signal wr_trigger_luts         : std_logic;
+   signal trigger_bus_busy        : std_logic;
+   signal triggerFound            : std_logic;
+                                  
+   signal controlRegister         : std_logic_vector(2 downto 0);
+   alias  controlReg_start_acq    : std_logic is controlRegister(0);
+   alias  controlReg_clear        : std_logic is controlRegister(1);
+   alias  controlReg_clear_counts : std_logic is controlRegister(2);
+                                  
+   signal fifo_empty              : std_logic;
+   signal fifo_full               : std_logic;
+   signal fifo_wr_en              : std_logic;
+   signal fifo_rd_en              : std_logic;
+   signal fifo_data_in            : SampleDataType;
+   signal fifo_data_out           : SampleDataType;
+   signal fifo_not_empty          : std_logic;
+                                  
+   signal data_count              : natural range 0 to 255;
+   signal decrement_data_count    : std_logic;
+   signal load_data_count         : std_logic;
    
-   signal controlRegister    : DataBusType;
-   alias  controlReg_enable  : std_logic is controlRegister(0);
+   signal write_control_reg       : std_logic;
    
-   signal fifoEmpty : std_logic;
-   signal fifoFull  : std_logic;
-   signal writeFifo : std_logic;
-   signal readFifo  : std_logic;
-   signal fifoIn    : SampleDataType;
-   signal fifoOut   : SampleDataType;
-   signal fifoNotEmpty : std_logic;
+   signal armed                   : std_logic;
+   signal sampling                : std_logic;
 
 begin
-   
-   armed    <= controlReg_enable;
-   sampling <= triggerFound;
-   
-   send_data     <= x"A5";
    
    ft2232h_Interface_inst:
    entity work.ft2232h_Interface 
    PORT MAP (
-      reset              => reset,
-      clock_100MHz       => clock_100MHz,
+      reset                         => reset,
+      clock_100MHz                  => clock_100MHz,
       
       -- FT2232H interface
-      ft2232h_rxf_n      => ft2232h_rxf_n,
-      ft2232h_rd_n       => ft2232h_rd_n,
-      ft2232h_txe_n      => ft2232h_txe_n,
-      ft2232h_wr_n       => ft2232h_wr_n,
-      ft2232h_data       => ft2232h_data,
-      ft2232h_siwu_n     => ft2232h_siwu_n,
+      ft2232h_rxf_n                 => ft2232h_rxf_n,
+      ft2232h_rd_n                  => ft2232h_rd_n,
+      ft2232h_txe_n                 => ft2232h_txe_n,
+      ft2232h_wr_n                  => ft2232h_wr_n,
+      ft2232h_data                  => ft2232h_data,
+      ft2232h_siwu_n                => ft2232h_siwu_n,
       
       -- Analyser interface
-      receive_data       => receive_data,
-      receive_data_ready => receive_data_ready,
-      receive_data_st    => receive_data_st,
+      host_receive_data             => host_receive_data,
+      host_receive_data_request     => host_receive_data_request,
+      host_receive_data_available   => host_receive_data_available,
       
-      send_data          => send_data,
-      send_data_req      => send_data_req,
-      send_data_ready    => send_data_ready
+      host_transmit_data            => host_transmit_data,
+      host_transmit_data_request    => host_transmit_data_request,
+      host_transmit_data_ready      => host_transmit_data_ready
    );
 
-	Fifo_inst:
+   Fifo_inst:
    entity work.fifo 
    port map(
 		clock          => clock_100MHz,
 		reset          => reset,
-		fifo_full      => fifoFull,
-		fifo_wr_en     => writeFifo,
-		fifo_data_in   => fifoIn,
-		fifo_empty     => fifoEmpty,
-		fifo_rd_en     => readFifo,
-		fifo_data_out  => fifoOut
+      
+		fifo_full      => fifo_full,
+		fifo_wr_en     => sampling,
+		fifo_data_in   => currentSample,
+		
+      fifo_empty     => fifo_empty,
+		fifo_rd_en     => fifo_rd_en,
+		fifo_data_out  => fifo_data_out
 	);
 
-   send_data_req <= cmd_dataOutReady;
+   fifo_not_empty    <= not fifo_empty;
 
-   cmd_address       <= (others => '1');
-   fifoNotEmpty      <= not fifoEmpty;
+   armed    <= '1' when (tState = t_armed) else '0';
+   armed_o  <= armed;
+
+   sampling <= '1' when (tState = t_running) else '0';
+   
+   TriggerStateMachine:
+   process(clock_100MHz)
+
+   begin
+      if rising_edge(clock_100MHz) then
+   
+         if (write_control_reg = '1') then
+            controlRegister <= host_receive_data(controlRegister'left downto controlRegister'right);
+         end if;
+         
+         case (tState) is
+            when t_idle =>
+               cmd_wr_address <= (others => '0');
+               if (controlReg_start_acq = '1') then
+                  controlReg_start_acq <= '0';
+                  tState               <= t_armed;
+               end if;
+               
+            when t_armed =>
+               if (triggerFound = '1') then
+                  tState <= t_running;
+               end if;
+ 
+            when t_running =>
+               cmd_wr_address <= std_logic_vector(unsigned(cmd_wr_address) + 1);
+               if (cmd_wr_address = cmd_wr_address_max) then
+                  tState <= t_complete;
+               end if;
+               
+            when t_complete =>
+               if (controlReg_clear = '1') then
+                  tState <= t_idle;
+               end if;
+         end case;
+            
+         if (reset = '1') then
+            controlRegister <= (others => '0');
+            tState          <= t_idle;
+         end if;
+      end if;
+   end process;
+   
+   process (clock_100MHz)
+   begin
+      if rising_edge(clock_100MHz) then
+         if ((reset = '1') or (controlReg_clear_counts = '1')) then
+            cmd_rd_address <= (others => '0');
+         elsif (increment_read_address = '1') then
+            cmd_rd_address <= std_logic_vector(unsigned(cmd_rd_address) + 1);
+         end if;
+      end if;
+   end process;
 
    SDRAM_Controller_inst :
    entity work.SDRAM_Controller
    port map(
-      clock_100MHz     => clock_100MHz,
-      clock_100MHz_n   => clock_100MHz_n,
-      reset            => reset,
+      clock_100MHz      => clock_100MHz,
+      clock_100MHz_n    => clock_100MHz_n,
+      reset             => reset,
 
-      cmd_wr           => fifoNotEmpty,
-      cmd_rd           => controlReg_enable,
-      cmd_address      => cmd_address,
-      cmd_dataIn       => fifoOut,
+      cmd_wr            => fifo_not_empty,
+      cmd_wr_data       => fifo_data_out,
+      cmd_wr_address    => cmd_wr_address,
+      cmd_wr_accepted   => fifo_rd_en,
 
-      cmd_done         => cmd_done,
-      cmd_dataOut      => cmd_dataOut,
-      cmd_dataOutReady => cmd_dataOutReady,
+      cmd_rd            => cmd_rd,
+      cmd_rd_data       => cmd_rd_data,
+      cmd_rd_address    => cmd_rd_address,
+      cmd_rd_accepted   => cmd_rd_accepted,
+      cmd_rd_data_ready => cmd_rd_data_ready,
       
-      initializing     => open,
+      initializing      => initializing,
       
-      sdram_clk        => sdram_clk,
-      sdram_cke        => sdram_cke,
-      sdram_cs_n       => sdram_cs_n,
-      sdram_ras_n      => sdram_ras_n,
-      sdram_cas_n      => sdram_cas_n,
-      sdram_we_n       => sdram_we_n,
-      sdram_dqm        => sdram_dqm,
-      sdram_ba         => sdram_ba,
-      sdram_addr       => sdram_addr,
-      sdram_data       => sdram_data
+      sdram_clk         => sdram_clk,
+      sdram_cke         => sdram_cke,
+      sdram_cs_n        => sdram_cs_n,
+      sdram_ras_n       => sdram_ras_n,
+      sdram_cas_n       => sdram_cas_n,
+      sdram_we_n        => sdram_we_n,
+      sdram_dqm         => sdram_dqm,
+      sdram_ba          => sdram_ba,
+      sdram_addr        => sdram_addr,
+      sdram_data        => sdram_data
    );
 
    Sampling_proc:
@@ -191,105 +269,168 @@ begin
       end if;
    end process;
 
-	-- Instantiate the Unit Under Test (UUT)
    TriggerBlock_inst: 
    entity TriggerBlock 
       port map (
          clock          => clock_100MHz,
          reset          => reset,
-         enable         => controlReg_enable,
+         enable         => armed,
          currentSample  => currentSample,
          lastSample     => lastSample,
          triggerFound   => triggerFound,
          
-         -- Bus interface
+         -- Bus interface (LUTs)
          wr_luts        => wr_trigger_luts,       
-         dataIn         => receive_data,   
+         dataIn         => host_receive_data,   
          rd_luts        => '0',
          dataOut        => open,         
          bus_busy       => trigger_bus_busy
         );
 
-   ControlRegProc:
+   ProcStateMachineSync:
    process(clock_100MHz)
+
    begin
       if rising_edge(clock_100MHz) then
          if (reset = '1') then
-            controlRegister <= (others => '0');
-         elsif ((command = C_WR_CONTROL) and (state = s_data)) then
-            controlRegister <= receive_data;
+            iState      <= s_cmd;
+            data_count  <= 0;
+         else
+            iState <= nextIState;
+            if (load_data_count = '1') then
+               data_count <= to_integer(unsigned(host_receive_data));
+            elsif (decrement_data_count = '1') then
+               data_count <= data_count-1;
+            end if;
+            if (save_command = '1') then
+               command <= analyserCmd(host_receive_data);
+            elsif (clear_command = '1') then
+               command <= ACmd_NOP;
+            end if;
          end if;
-         if (triggerFound = '1') then
-            controlReg_enable <= '0';
-         end if;
-      end if;   
-   end process;
-   
-   ProcSwitching:
-   process(command, state, receive_data_st, trigger_bus_busy)
-   begin
-      -- Default to not accept new data
-      receive_data_ready  <= '0';
-      wr_trigger_luts     <= '0';
-      
-      case (command) is
-         when C_NOP =>
-            receive_data_ready  <= '1';
-            null;
-            
-         when C_LUT_CONFIG =>
-            receive_data_ready  <= not trigger_bus_busy;
-            if (state = s_data) then
-              wr_trigger_luts     <= receive_data_st;
-            end if;            
-
-         when C_WR_CONTROL =>
-            receive_data_ready  <= '1';
-            null; -- See ControlRegProc
-            
-         when others =>
-            null;
-      end case;
-      
-      -- Always accept data in these states
-      if ((state = s_cmd) or (state = s_size)) then
-         receive_data_ready  <= '1';
       end if;
    end process;
    
    ProcStateMachine:
-   process(clock_100MHz)
+   process(iState, command, host_receive_data_available, trigger_bus_busy, data_count, cmd_rd_accepted, cmd_rd_data, host_transmit_data_ready, host_receive_data, cmd_rd_data_ready)
 
-      variable data_count : natural range 0 to 255;
-      
    begin
-      if rising_edge(clock_100MHz) then
-         case (state) is
-            when s_cmd =>
-               if (receive_data_st = '1') then
-                  command <= receive_data;
-                  if (receive_data /= C_NOP) then
-                     state <= s_size;
-                  end if;
-               end if;                  
-            when s_size =>
-               if (receive_data_st = '1') then
-                  data_count := to_integer(unsigned(receive_data));
-                  state <= s_data;
-               end if;                  
-            when s_data =>
-               if (receive_data_st = '1') then
-                  data_count := data_count-1;
-                  if (data_count = 0) then
-                     state   <= s_cmd;
-                     command <= C_NOP;
-                  end if;
-               end if;                  
-         end case;
-         if (reset = '1') then
-            state   <= s_cmd;
-            command <=  C_NOP;
-         end if;
-      end if;
+      -- Default to not accept new data
+      host_receive_data_request  <= '0';
+      wr_trigger_luts            <= '0';
+
+      -- Default to not reading SDRAM
+      cmd_rd                     <= '0';
+      host_transmit_data_request <= '0';
+      host_transmit_data         <= cmd_rd_data(7 downto 0);
+
+      load_data_count            <= '0';
+      decrement_data_count       <= '0';
+
+      save_command               <= '0';
+      clear_command              <= '0';
+
+      write_control_reg          <= '0';
+      
+      increment_read_address     <= '0';
+
+      nextIState <= iState;
+      
+      case (iState) is
+         when s_cmd =>
+            -- Available to accept commands from host
+            host_receive_data_request <= '1';
+            
+            if (host_receive_data_available = '1') and (host_receive_data /= C_NOP) then
+               -- Save command and start processing
+               nextIState     <= s_size;
+               save_command  <= '1';
+            else
+               clear_command <= '1';
+            end if;                  
+
+         when s_size =>
+            -- Available to accept command size from host
+            host_receive_data_request <= '1';
+            
+            if (host_receive_data_available = '1') then
+               load_data_count <= '1';
+               case (command) is
+                  when ACmd_LUT_CONFIG =>
+                     nextIState <= s_lut_config;
+                     
+                  when ACmd_WR_CONTROL =>
+                     nextIState <= s_write_control;
+                  
+                  when ACmd_RD_BUFFER =>
+                     nextIState <= s_read_buffer;
+                  
+                  when others =>
+                     nextIState <= s_cmd;
+               end case;
+            end if;   
+            
+         when s_write_control =>
+            -- Available to accept control register value from host
+            host_receive_data_request <= '1';
+            
+            if (host_receive_data_available = '1') then
+               write_control_reg  <= '1';
+               nextIState         <= s_cmd;
+            end if;
+            
+         when s_lut_config =>
+            -- Throttle host
+            host_receive_data_request  <= not trigger_bus_busy;
+            
+            -- Tell trigger to accpet LUT config when available from host
+            wr_trigger_luts            <= host_receive_data_available;
+
+            if (host_receive_data_available = '1') then
+               if (data_count = 1) then
+                  nextIState     <= s_cmd;
+                  clear_command <= '1';
+               else
+                  decrement_data_count <= '1';
+               end if;
+            end if;  
+            
+         --===========================================
+         -- Due to pipelining in the SDRAM it is
+         -- necessary to be careful to only read a single word at a time
+         when s_read_buffer =>
+         
+            -- Tell SDRAM we want data when FTDI is ready
+            cmd_rd <= host_transmit_data_ready;
+            if (cmd_rd_accepted = '1') then
+               -- SDRAM has accepted command but data won't be available for a few clocks
+               nextIState <= s_read_buffer_even;
+            end if;
+            
+         when s_read_buffer_even =>
+         
+            host_transmit_data <= cmd_rd_data(15 downto 8);
+
+            if (host_transmit_data_ready = '1') and (cmd_rd_data_ready = '1') then
+               host_transmit_data_request  <= '1';
+               nextIState                  <= s_read_buffer_odd;
+            end if;                  
+
+         when s_read_buffer_odd =>
+         
+            host_transmit_data <= cmd_rd_data(7 downto 0);
+
+            if (host_transmit_data_ready = '1') then
+               host_transmit_data_request <= '1';
+               increment_read_address     <= '1';
+               if (data_count = 1) then
+                  nextIState              <= s_cmd;
+                  clear_command           <= '1';
+               else
+                  nextIState              <= s_read_buffer;
+                  decrement_data_count    <= '1';
+               end if;
+            end if;                  
+      end case;
    end process;
 end Behavioral;

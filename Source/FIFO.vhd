@@ -61,12 +61,12 @@ end fifo;
 
 architecture behavioral of fifo is
    
-   constant RAM_BITS : natural := 14; -- real 10;
+   constant RAM_BITS : natural := 10;
    constant RAM_SIZE : natural := 2**RAM_BITS;
    subtype FifoAddressType is unsigned(RAM_BITS-1 downto 0);
    
    type RamType is array (0 to RAM_SIZE-1) of SampleDataType;
-   signal ram: RamType := (others => (others => '0'));
+   signal ram: RamType;-- := (others => (others => '0'));
    
    signal writeAddress : FifoAddressType := (others => '0');
    signal readAddress  : FifoAddressType := (others => '0');

@@ -2,9 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library std_developerskit;
-use std_developerskit.std_iopak;
-
 use work.logicanalyserpackage.all;
 
 entity sdram is
@@ -38,6 +35,11 @@ architecture behavioral of sdram is
    signal active_row    : row_array     := (others => (others => '0'));
    signal is_row_active : std_logic_vector( 3 downto 0);
    signal mode_reg      : std_logic_vector(12 downto 0);
+   
+   alias burst_mode     : std_logic        is mode_reg(9);
+   alias burst_length   : std_logic_vector is mode_reg(2 downto 0);
+   alias cas_latency    : std_logic_vector is mode_reg(6 downto 4);
+
    signal data_delay1   : std_logic_vector(15 downto 0);
    signal data_delay2   : std_logic_vector(15 downto 0);
    signal data_delay3   : std_logic_vector(15 downto 0);
@@ -46,8 +48,11 @@ architecture behavioral of sdram is
    signal wr_mask       : std_logic_vector( 1 downto 0);
    signal wr_data       : std_logic_vector(15 downto 0);
    signal wr_burst      : std_logic_vector( 8 downto 0);
-   signal rd_burst      : std_logic_vector( 9 downto 0);
+   signal rd_burst      : std_logic_vector( 9 downto 0) := (others => '0');
 
+   signal sdram_data_out : std_logic_vector(15 downto 0) := (others => '0');
+   signal sdram_hiz      : std_logic;
+   
 begin
 
    addr_index <= active_row(to_integer(unsigned(selected_bank))) & selected_bank & column;
@@ -99,10 +104,10 @@ begin
                rd_burst <= (others => '0');
                column        <= sdram_addr(8 downto 0);
                selected_bank <= sdram_ba;
-               if mode_reg(9) = '1' then
+               if burst_mode = '1' then
                   wr_burst <= "000000001";
                else
-                  case mode_reg(2 downto 0) is
+                  case burst_length is
                      when "000" => wr_burst <= "000000001";
                      when "001" => wr_burst <= "000000011";
                      when "010" => wr_burst <= "000001111";
@@ -125,55 +130,64 @@ begin
                wr_burst      <= (others => '0');
                column        <= sdram_addr(8 downto 0);
                selected_bank <= sdram_ba;
-               -- This sets the bust length
-               case mode_reg(2 downto 0) is
-                  when "000" => rd_burst <= "000000001" & rd_burst(1);
-                  when "001" => rd_burst <= "000000011" & rd_burst(1);
-                  when "010" => rd_burst <= "000001111" & rd_burst(1);
-                  when "011" => rd_burst <= "011111111" & rd_burst(1);
-                  when "111" => rd_burst <= "111111111" & rd_burst(1);  -- full page
+               -- This sets the burst length
+               case burst_length is
+                  when "000" => rd_burst <= "0000000001";
+                  when "001" => rd_burst <= "0000000011";
+                  when "010" => rd_burst <= "0000001111";
+                  when "011" => rd_burst <= "0011111111";
+                  when "111" => rd_burst <= "0111111111";  -- full page
                   when others =>
-                     -- full page not implemnted
+                     -- full page not implemented
                end case;
             end if;
 
             -- This is the logic that implements the CAS delay. Here is enough for CAS=2
-            if mode_reg(6 downto 4) = "010" then
+            if (cas_latency = "010") then
+               dqm_sr  <= "11"&sdram_dqm;
                data_delay1 <= memory(to_integer(unsigned(addr_index)));
-            elsif mode_reg(6 downto 4) = "011" then
-               data_delay1 <=  data_delay2;
+            elsif (cas_latency = "011") then
+               dqm_sr  <= sdram_dqm & dqm_sr(3 downto 2);
+               data_delay1 <= data_delay2;
                data_delay2 <= memory(to_integer(unsigned(addr_index)));
             else
-               data_delay1 <=  data_delay2;
-               data_delay2 <=  data_delay3;
+               data_delay1 <= data_delay2;
+               data_delay2 <= data_delay3;
                data_delay3 <= memory(to_integer(unsigned(addr_index)));
             end if;
 
             -- Output masks lag a cycle
-            dqm_sr  <= sdram_dqm & dqm_sr(3 downto 2);
             wr_mask <= not sdram_dqm;
 
          end if;
       end process;
 
+   sdram_data <= sdram_data_out when (sdram_hiz = '0') else (others => 'Z');
+   
    data2_process :
    process(sdram_clk)
+      constant tAC  : time := 6 ns;
+      constant tOH  : time := 3 ns;
+      constant tHZ  : time := 6 ns;
+      constant tLZ  : time := 1 ns;
       begin
          if rising_edge(sdram_clk) then
             if rd_burst(0) = '1' and dqm_sr(0) = '0' then
-               sdram_data( 7 downto 0) <= data_delay1(7 downto 0) after 4 ns;
+               sdram_data_out( 7 downto 0) <= data_delay1(7 downto 0) after tAC;
+               sdram_hiz <= '0' after tLZ;
             else
-               sdram_data( 7 downto 0) <= "ZZZZZZZZ" after 4.0 ns;
+               sdram_data_out( 7 downto 0) <= (others => 'X') after tOH;
+               sdram_hiz <= '1' after tHZ;
             end if;
 
             if rd_burst(0) = '1' and dqm_sr(1) = '0' then
-               sdram_data(15 downto 8) <= data_delay1(15 downto 8) after 4.0 ns;
-               -- Move onto the next address in the active row
+               sdram_data_out(15 downto 8) <= data_delay1(15 downto 8) after tAC;
+               sdram_hiz <= '0' after tLZ;
             else
-               sdram_data(15 downto 8) <= "ZZZZZZZZ" after 4.0 ns;
+               sdram_data_out(15 downto 8) <= (others => 'X') after tOH;
+               sdram_hiz <= '1' after tHZ;
             end if;
          elsif falling_edge(sdram_clk) then
-            sdram_data <= (others => 'Z') after 4.5 ns;
          end if;
       end process;
 

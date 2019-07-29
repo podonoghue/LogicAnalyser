@@ -23,9 +23,9 @@ entity LogicAnalyserWrapper is
       -- Trigger logic
       sample         : in    SampleDataType;
       armed          : out   std_logic;
-      sampling       : out   std_logic;
 
       -- SDRAM interface
+      initializing   : out   std_logic;
       sdram_clk      : out   std_logic;
       sdram_cke      : out   std_logic;
       sdram_cs_n     : out   std_logic;
@@ -68,10 +68,10 @@ begin
       
       -- Trigger logic 
       sample         => sample,       
-      armed          => armed,      
-      sampling       => sampling,
+      armed_o        => armed,      
       
       -- SDRAM Interface
+      initializing => initializing,
       sdram_clk    => sdram_clk,   
       sdram_cke    => sdram_cke, 
       sdram_cs_n   => sdram_cs_n,    
@@ -95,9 +95,7 @@ begin
       -- Clock out ports
       clk_out1 => clock_200MHz,
       clk_out2 => clock_100MHz,
-      clk_out3 => clock_100MHz_n,
-      
-      locked   => open
+      clk_out3 => clock_100MHz_n
    ); 
 
 end;

@@ -18,13 +18,13 @@ ARCHITECTURE behavior OF ft2232h_Interface_tb IS
    signal ft2232h_wr_n       : std_logic;
    signal ft2232h_data       : DataBusType := (others => 'Z');
 
-   signal receive_data       : DataBusType;
-   signal receive_data_st    : std_logic;
-   signal receive_data_ready : std_logic := '0';
+   signal host_receive_data       : DataBusType;
+   signal host_receive_data_available    : std_logic;
+   signal host_receive_data_request : std_logic := '0';
    
-   signal send_data          : DataBusType := (others => '0');
-   signal send_data_ready    : std_logic;
-   signal send_data_req      : std_logic := '0';
+   signal host_transmit_data          : DataBusType := (others => '0');
+   signal host_transmit_data_ready    : std_logic;
+   signal host_transmit_data_request      : std_logic := '0';
 
    -- Clock period definitions
    constant clock_period   : time    := 10 ns;
@@ -51,14 +51,14 @@ BEGIN
       ft2232h_data         => ft2232h_data,
 
       -- Receive interface      
-      receive_data         => receive_data,
-      receive_data_ready   => receive_data_ready,
-      receive_data_st      => receive_data_st,
+      host_receive_data         => host_receive_data,
+      host_receive_data_request   => host_receive_data_request,
+      host_receive_data_available      => host_receive_data_available,
       
       -- Send interface
-      send_data            => send_data,
-      send_data_ready      => send_data_ready,
-      send_data_req        => send_data_req
+      host_transmit_data            => host_transmit_data,
+      host_transmit_data_ready      => host_transmit_data_ready,
+      host_transmit_data_request        => host_transmit_data_request
    );
 
    -- Clock process definitions
@@ -159,10 +159,10 @@ BEGIN
    
    begin		
       wait for 150 ns;
-      send_data_req <= '1';
-      send_data     <= x"23";
+      host_transmit_data_request <= '1';
+      host_transmit_data     <= x"23";
       ft2232h_hostWrite(rdData);
-      receive_data_ready <= '1';
+      host_receive_data_request <= '1';
       ft2232h_hostWrite(rdData);
       ft2232h_hostWrite(rdData);
       ft2232h_hostWrite(rdData);
