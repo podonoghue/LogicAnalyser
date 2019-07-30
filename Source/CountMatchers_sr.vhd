@@ -10,8 +10,6 @@ use work.LogicAnalyserPackage.all;
 
 entity CountMatchers_sr is
    port( 
-      clock             : in  std_logic; 
-      
       -- Count of matches for current step
       matchCounter      : in  MatchCounterType;
       
@@ -25,6 +23,7 @@ entity CountMatchers_sr is
       --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
       --   Combiner:    MAX_TRIGGER_STEPS*MAX_TRIGGER_PATTERNS/4 LUTs
       --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
+      lut_clock         : in  std_logic;  -- Used to clock LUT chain
       lut_config_ce     : in  std_logic;  -- Clock enable for LUT shift register
       lut_config_in     : in  std_logic;  -- Serial in for LUT shift register (MSB first)
       lut_config_out    : out std_logic   -- Serial out for LUT shift register
@@ -54,7 +53,7 @@ begin
       )
       port map (
          -- Reconfigure shift register
-         clk => clock,                     -- LUT shift-register clock
+         clk => lut_clock,                 -- LUT shift-register clock
          ce  => lut_config_ce,             -- LUT shift-register clock enable
          cdi => lut_chainIn(counterBits),  -- Serial configuration data input (MSB first)
          cdo => lut_chainOut(counterBits), -- Serial configuration data output
@@ -68,7 +67,7 @@ begin
          i0  => triggerStep(0), -- Logic data input
          
          o5  => compareMatchCounter(counterBits), -- LUT4 output LUT[15..0]
-         o6  => open                       -- LUT4 output LUT[31..16]     
+         o6  => open                              -- LUT4 output LUT[31..16]     
       );
    end generate;
   

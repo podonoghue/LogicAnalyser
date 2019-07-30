@@ -31,7 +31,7 @@ architecture behavioral of sdram is
    type   memory_array is array (0 to 8 * 512 * 4 -1 ) of std_logic_vector(15 downto 0);
    type   row_array    is array (0 to 3)               of std_logic_vector( 2 downto 0);
 
-   signal memory        : memory_array  := (others => (x"A5A5"));
+   signal memory        : memory_array  := (others => (x"A55A"));
    signal active_row    : row_array     := (others => (others => '0'));
    signal is_row_active : std_logic_vector( 3 downto 0);
    signal mode_reg      : std_logic_vector(12 downto 0);

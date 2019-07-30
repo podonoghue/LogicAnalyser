@@ -42,8 +42,8 @@ package LogicAnalyserPackage is
    -- Flags used by trigger state machine
 
    constant NUM_TRIGGER_FLAGS                : integer := 2;
-   constant CONTIGUOUS_TRIGGER_INDEX         : integer :=0;
-   constant TRIGGER_SEQUENCE_COMPLETE_INDEX  : integer :=1;
+   constant CONTIGUOUS_TRIGGER_INDEX         : integer := 0;
+   constant TRIGGER_SEQUENCE_COMPLETE_INDEX  : integer := 1;
 
    --==========================================================
    -- Sample inputs
@@ -115,7 +115,31 @@ package LogicAnalyserPackage is
    constant C_CONTROL_ENABLE        : DataBusType := "00000001";
    constant C_CONTROL_CLEAR         : DataBusType := "00000010";
    constant C_CONTROL_CLEAR_COUNTS  : DataBusType := "00000100";
+   
+   constant C_CONTROL_DIV1          : DataBusType := "00000000";
+   constant C_CONTROL_DIV2          : DataBusType := "00001000";
+   constant C_CONTROL_DIV5          : DataBusType := "00010000";
+   constant C_CONTROL_DIV10         : DataBusType := "00011000";
+   
+   constant C_CONTROL_DIVx1         : DataBusType := "00000000";
+   constant C_CONTROL_DIVx10        : DataBusType := "00100000";
+   constant C_CONTROL_DIVx100       : DataBusType := "01000000";
+   constant C_CONTROL_DIVx1000      : DataBusType := "01100000";
 
+   constant C_CONTROL_S_10ns  : DataBusType := C_CONTROL_DIVx1    or C_CONTROL_DIV1;
+   constant C_CONTROL_S_20ns  : DataBusType := C_CONTROL_DIVx1    or C_CONTROL_DIV2;
+   constant C_CONTROL_S_50ns  : DataBusType := C_CONTROL_DIVx1    or C_CONTROL_DIV5;
+   constant C_CONTROL_S_100ns : DataBusType := C_CONTROL_DIVx10   or C_CONTROL_DIV1;
+   constant C_CONTROL_S_200ns : DataBusType := C_CONTROL_DIVx10   or C_CONTROL_DIV2;
+   constant C_CONTROL_S_500ns : DataBusType := C_CONTROL_DIVx10   or C_CONTROL_DIV5;
+   constant C_CONTROL_S_1us   : DataBusType := C_CONTROL_DIVx100  or C_CONTROL_DIV1;
+   constant C_CONTROL_S_2us   : DataBusType := C_CONTROL_DIVx100  or C_CONTROL_DIV2;
+   constant C_CONTROL_S_5us   : DataBusType := C_CONTROL_DIVx100  or C_CONTROL_DIV5;
+   constant C_CONTROL_S_10us  : DataBusType := C_CONTROL_DIVx1000 or C_CONTROL_DIV1;
+   constant C_CONTROL_S_20us  : DataBusType := C_CONTROL_DIVx1000 or C_CONTROL_DIV2;
+   constant C_CONTROL_S_50us  : DataBusType := C_CONTROL_DIVx1000 or C_CONTROL_DIV5;
+   constant C_CONTROL_S_100us : DataBusType := C_CONTROL_DIVx1000 or C_CONTROL_DIV10;
+   
    -------------------------------------------------------------
    -- Maps readable command names (for debug) to physical values
    --

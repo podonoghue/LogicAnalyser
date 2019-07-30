@@ -217,6 +217,8 @@ architecture Behavioral of SDRAM_Controller is
    signal restartCounters      : std_logic;
    signal rd_data_ready        : std_logic;
    
+   signal sdram_data_90        : sdram_phy_DataType;
+
    -------------------------------------------------------------
    -- Maps readable command names (for debug) to physical values
    --
@@ -236,8 +238,6 @@ architecture Behavioral of SDRAM_Controller is
 
 begin
 
-   cmd_rd_data_ready <= rd_data_ready;
-   
    -------------------------------------------------------------------
    -- Forward the SDRAM clock to the SDRAM chip - 180 degress
    -- out of phase with the control signals (ensuring setup and hold)
@@ -291,16 +291,30 @@ begin
    cmd_rd_accepted <= cmd_rd_accepted_sm;
    cmd_wr_accepted <= cmd_wr_accepted_sm;
 
-   Sdram_Sync_proc1:
+   Sdram_Sync_proc1n:
    process (clock_100MHz_n)
    begin
       if rising_edge(clock_100MHz_n) then
          if (reset = '1') then
-            cmd_rd_data          <= (others => '0');
+            sdram_data_90          <= (others => '0');
          else
             if (rd_data_ready = '1') then
-               cmd_rd_data       <= sdram_data;
+               sdram_data_90       <= sdram_data;
             end if;
+         end if;
+      end if;
+   end process;
+
+   Sdram_Sync_proc1:
+   process (clock_100MHz)
+   begin
+      if rising_edge(clock_100MHz) then
+         if (reset = '1') then
+            cmd_rd_data       <= (others => '0');
+            cmd_rd_data_ready <= '0';
+         else
+            cmd_rd_data_ready <= rd_data_ready;
+            cmd_rd_data       <= sdram_data_90;
          end if;
       end if;
    end process;

@@ -73,14 +73,14 @@ use unisim.vcomponents.all;
 --=================================================================================
 entity PatternCombiner is
     port ( 
-         clock          : in  std_logic; 
-   
          -- All pattern match values across all steps
          conditions     : in  TriggerConditionArray; 
-         -- Trigger outputs for each step 
+         
+         -- Trigger outputs for each step
          triggers       : out std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0); 
          
          -- LUT serial configuration: MAX_TRIGGER_STEPS*MAX_TRIGGER_PATTERNS)/4 LUTs
+         lut_clock      : in  std_logic;  -- Used to clock LUT chain
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
          lut_config_out : out std_logic   -- Serial out for LUT shift register
@@ -90,15 +90,13 @@ end entity;
 architecture behavioral of PatternCombiner is
 
 -- Each LUT can implement a combiner for a step
-constant NUM_LUTS           : integer := MAX_TRIGGER_STEPS;
+constant NUM_LUTS    : integer := MAX_TRIGGER_STEPS;
 
-signal lut_chainIn  : std_logic_vector(NUM_LUTS-1 downto 0);
-signal lut_chainOut : std_logic_vector(NUM_LUTS-1 downto 0);
-signal triggerToFFs : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0);
+signal lut_chainIn   : std_logic_vector(NUM_LUTS-1 downto 0);
+signal lut_chainOut  : std_logic_vector(NUM_LUTS-1 downto 0);
+
 begin
 
-   triggers <= triggerToFFs when rising_edge(clock);
-   
    GenerateLogic2:
    if (MAX_TRIGGER_PATTERNS = 2) generate
    begin
@@ -111,7 +109,7 @@ begin
          )
          port map (
             -- Reconfigure shift register
-            clk => clock,                 -- LUT shift-register clock
+            clk => lut_clock,             -- LUT shift-register clock
             ce  => lut_config_ce,         -- LUT shift-register clock enable
             cdi => lut_chainIn(index),    -- Serial configuration data input (MSB first)
             cdo => lut_chainOut(index),   -- Serial configuration data output
@@ -123,7 +121,7 @@ begin
             i1  => conditions(index)(1),  -- Logic data input
             i0  => conditions(index)(0),  -- Logic data input
             
-            o5  => triggerToFFs(index),   -- 4-LUT output
+            o5  => triggers(index),       -- 4-LUT output
             o6  => open                   -- unused     
          );
       end generate;
@@ -142,7 +140,7 @@ begin
          )
          port map (
             -- Reconfigure shift register
-            clk => clock,                 -- LUT shift-register clock
+            clk => lut_clock,             -- LUT shift-register clock
             ce  => lut_config_ce,         -- LUT shift-register clock enable
             cdi => lut_chainIn(index),    -- Serial configuration data input (MSB first)
             cdo => lut_chainOut(index),   -- Serial configuration data output
@@ -154,7 +152,7 @@ begin
             i1  => conditions(index)(1),  -- Logic data input
             i0  => conditions(index)(0),  -- Logic data input
             
-            o5  => triggerToFFs(index),   -- 4-LUT output
+            o5  => triggers(index),       -- 4-LUT output
             o6  => open                   -- unused     
          );
       end generate;

@@ -27,7 +27,7 @@ use work.LogicAnalyserPackage.all;
 -- Number of LUTs:
 --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 = 16 * 4/2 * 16/2 = 256 LUTs
 --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/4                = 16 * 4/4        =  16 LUTs
---   Flags:       NUM_TRIGGER_FLAGS * MAX_TRIGGER_STEPS/16                    =  2 * 16/16      =   2 LUT
+--   Flags:       NUM_TRIGGER_FLAGS * MAX_TRIGGER_STEPS/16                  =  2 * 16/16      =   2 LUT
 -- TODO
 -- +-------------+-------------+-------------+-------------+-------------+------------+-------------+-------------+
 -- |   Flag(1)   |   Flag(0)   |  Combiner   | Trigger 15  | Trigger 14  | ...    ... | Trigger 1   | Trigger 0   |
@@ -59,6 +59,8 @@ entity TriggerBlock is
       
       -- Trigger logic
       enable         : in  std_logic;
+      
+      doSample       : in  std_logic;
       currentSample  : in  SampleDataType;  -- Current sample data
       lastSample     : in  SampleDataType;  -- Previous sample data
       
@@ -93,32 +95,37 @@ signal lut_config_ce  : std_logic;  -- Clock enable for LUT shift register
 signal lut_config_in  : std_logic;  -- Serial in for LUT shift register (MSB first)
 signal lut_config_out : std_logic;  -- Serial out for LUT shift register
 
+signal lut_clock      : std_logic;  -- Used to clock LUT chain
+
 begin
+   
    TriggerBusInterface_inst:
    entity work.TriggerBusInterface 
    PORT MAP(
-		reset          => reset,
-		clock          => clock,
-
-		dataIn         => dataIn ,
-		wr             => wr_luts,
-
-		dataOut        => dataOut,
-		rd             => rd_luts,
-
-      busy           => bus_busy,
-
-		lut_config_ce  => lut_config_ce,
-		lut_config_in  => lut_config_in,
-		lut_config_out => lut_config_out
+		reset             => reset,
+		clock             => clock,
+                        
+		dataIn            => dataIn ,
+		wr                => wr_luts,
+                        
+		dataOut           => dataOut,
+		rd                => rd_luts,
+                        
+      busy              => bus_busy,
+                        
+      lut_clock         => lut_clock,
+		lut_config_ce     => lut_config_ce,
+		lut_config_in     => lut_config_in,
+		lut_config_out    => lut_config_out
 	);
 
 --   ConfigData_inst:
 --   entity ConfigData
 --      port map (
 --         reset          => reset,
+--
 --         -- LUT serial configuration          
---         clock      => clock,      -- Used for LUT shift register          
+--         lut_clock      => lut_clock,      -- Used for LUT shift register          
 --         lut_config_ce  => lut_config_ce,  -- Clock enable for LUT shift register
 --         lut_config_in  => lut_chainIn(0), -- Serial in for LUT shift register MSB first in
 --         lut_config_out => lut_chainOut(0) -- Serial out for LUT shift register
@@ -127,7 +134,8 @@ begin
    PatternMatchers_inst:
    entity work.PatternMatchers
    port map ( 
-      clock          => clock,
+      clock                => clock,               -- Used for pipelining
+      doSample             => doSample,
       
       -- Trigger logic
       currentSample        => currentSample,       -- Current sample data
@@ -138,26 +146,27 @@ begin
       -- LUT serial configuration:
       --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
       --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS)/4 LUTs
-      lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
-      lut_config_in  => lut_chainIn(2),   -- Serial configuration data input (MSB first)
-      lut_config_out => lut_chainOut(2)   -- Serial configuration data output
+      lut_clock            => lut_clock,           -- Used to clock LUT chain
+      lut_config_ce        => lut_config_ce,       -- LUT shift-register clock enable
+      lut_config_in        => lut_chainIn(2),      -- Serial configuration data input (MSB first)
+      lut_config_out       => lut_chainOut(2)      -- Serial configuration data output
    );
 
    CountMatchers_inst:
    entity work.CountMatchers_sr
    port map ( 
-      clock              => clock,
-      matchCounter       => matchCount,           -- Current match counter
-      triggerStep        => triggerStep,          -- Current step in trigger sequence
+      matchCounter       => matchCount,         -- Current match counter
+      triggerStep        => triggerStep,        -- Current step in trigger sequence
 
-      triggerCountMatch  => triggerCountMatch,   -- Trigger count comparator outputs
+      triggerCountMatch  => triggerCountMatch,  -- Trigger count comparator outputs
 
       -- LUT serial configuration:
       --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
       --   Combiner:    MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS)/4 LUTs
-      lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
-      lut_config_in  => lut_chainIn(1),   -- Serial configuration data input (MSB first)
-      lut_config_out => lut_chainOut(1)   -- Serial configuration data output
+      lut_clock      => lut_clock,              -- Used to clock LUT chain
+      lut_config_ce  => lut_config_ce,          -- LUT shift-register clock enable
+      lut_config_in  => lut_chainIn(1),         -- Serial configuration data input (MSB first)
+      lut_config_out => lut_chainOut(1)         -- Serial configuration data output
    );
 
    StepFlags_inst:
@@ -166,14 +175,13 @@ begin
       NUM_FLAGS => NUM_TRIGGER_FLAGS
    )
    port map ( 
-      clock          => clock,
-      
       -- Trigger logic
-      triggerStep    => triggerStep,          -- Current step in trigger sequence
-      flags          => flags,                -- Comparator outputs
+      triggerStep    => triggerStep,      -- Current step in trigger sequence
+      flags          => flags,            -- Comparator outputs
 
       -- LUT serial configuration 
       -- MAX_TRIGGER_STEPS * NUM_MATCH_COUNTER_BITS/4 x 32 bits = MAX_TRIGGER_PATTERNS * NUM_INPUTS/2 LUTs
+      lut_clock      => lut_clock,        -- Used to clock LUT chain
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chainIn(0),   -- Serial configuration data input (MSB first)
       lut_config_out => lut_chainOut(0)   -- Serial configuration data output
@@ -201,6 +209,8 @@ begin
 		clock                   => clock,
 		reset                   => reset,
 		enable                  => enable,
+      
+      doSample                => doSample,
       triggerCountMatch       => triggerCountMatch,
       triggerPatternMatch     => triggerPatternMatch,
 		lastTriggerStep         => lastTriggerStep,

@@ -46,8 +46,6 @@ signal clock_100MHz       : std_logic;
 signal clock_100MHz_n     : std_logic;
 signal clock_200MHz       : std_logic;
 
-signal sampleFF           : SampleDataType;
-
 begin
    reset <= not reset_n when rising_edge(clock_100MHz);
    
@@ -69,7 +67,8 @@ begin
       -- Trigger logic 
       sample         => sample,       
       armed_o        => armed,      
-      
+      sampleEnable_o => open,
+
       -- SDRAM Interface
       initializing => initializing,
       sdram_clk    => sdram_clk,   

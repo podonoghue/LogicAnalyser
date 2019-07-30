@@ -25,7 +25,8 @@ ARCHITECTURE behavior OF LogicAnalyser_tb IS
                                   
    signal   armed_o               : std_logic;
    signal   sample                : SampleDataType  := (others => '0');   
-                                  
+   signal   sampleEnable          : std_logic;
+   
    signal   initializing        : std_logic;
    signal   sdram_clk           : std_logic;
    signal   sdram_cke           : std_logic;
@@ -78,7 +79,8 @@ begin
                       
       sample          => sample,
       armed_o         => armed_o,
-                      
+      sampleEnable_o  => sampleEnable,
+      
       -- SDRAM        
       initializing    => initializing,
                       
@@ -309,7 +311,11 @@ begin
 
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
-      sendToAnalyser(C_CONTROL_ENABLE);
+      sendToAnalyser(C_CONTROL_S_50ns);
+
+      sendToAnalyser(C_WR_CONTROL);
+      sendToAnalyser("00000001");
+      sendToAnalyser(C_CONTROL_ENABLE or C_CONTROL_S_50ns);
 
       writeLutsComplete <= true;
       wait;
@@ -390,7 +396,7 @@ begin
       wait until falling_edge(clock_100MHz);
       for index in stimulus'range loop
          sample <= stimulus(index);
-         wait until falling_edge(clock_100MHz);
+         wait until (sampleEnable = '1') and falling_edge(clock_100MHz);
       end loop;
       
       wait for 1000 ns;
