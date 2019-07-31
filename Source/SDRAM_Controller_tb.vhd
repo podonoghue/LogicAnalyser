@@ -16,7 +16,7 @@ architecture behavior of SDRAM_controller_tb is
    signal reset             : std_logic := '0';
    
    signal cmd_wr            : std_logic := '0';
-   signal cmd_wr_address    : sdram_AddrType := (others => '0');
+   signal cmd_wr_clear      : std_logic;
    signal cmd_wr_data       : sdram_DataType := (others => '0');
    signal cmd_wr_accepted   : std_logic;
 
@@ -61,7 +61,7 @@ begin
           
           cmd_wr            => cmd_wr,
           cmd_wr_data       => cmd_wr_data,
-          cmd_wr_address    => cmd_wr_address,          
+          cmd_wr_clear      => cmd_wr_clear,          
           cmd_wr_accepted   => cmd_wr_accepted,
           
           cmd_rd            => cmd_rd,
@@ -137,12 +137,10 @@ begin
    
    procedure write(addr : sdram_AddrType; data : sdram_DataType) is
    begin
-      cmd_wr_address <= addr;
       cmd_wr_data  <= data;
       cmd_wr      <= '1';
       wait until rising_edge(clock_100MHz) and (cmd_done = '1');
       wait for 1 ns;
-      cmd_wr_address <= (others => 'X');
       cmd_wr_data  <= (others => 'X');
       cmd_wr      <= 'X';
    end procedure;
@@ -172,7 +170,10 @@ begin
       if (initializing = '1') then
          wait until initializing = '0';
       end if;
-      
+
+      cmd_wr_clear <= '1';
+      wait until rising_edge(clock_100MHz);
+
       status <= "wr A1 ";
       write(x"031010", x"1234");
       status <= "wr A2 ";

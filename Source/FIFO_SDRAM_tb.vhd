@@ -40,6 +40,7 @@ architecture behavior of fifo_sdram_tb is
    constant clock_period   : time    := 10 ns;
    signal   complete       : boolean := false;
 
+   signal   status         : string(1 to 5) := "     ";
 begin
 
 sdram_entity:
@@ -113,10 +114,14 @@ entity work.FIFO_SDRAM
 
       procedure writeStuff(count : natural) is
       begin
+         
+         wait until falling_edge(clock_100MHz);
+         wait for 1 ns;
          for index in 0 to count-1 loop
             if (fifo_full = '1') then
                wait until fifo_full = '0';
                wait until falling_edge(clock_100MHz);
+               wait for 1 ns;
             end if;
             fifo_wr_en   <= '1';
             fifo_data_in <= std_logic_vector(writeCounter);
@@ -145,6 +150,7 @@ entity work.FIFO_SDRAM
       reset <= '1';
       wait for 2 * clock_period;
       reset <= '0';
+      status <= "INIT ";
 
       if (initializing = '1') then
          wait until (initializing = '0');
@@ -152,24 +158,56 @@ entity work.FIFO_SDRAM
       wait until falling_edge(clock_100MHz);
       wait for 0.5 ns;
 
-      writeStuff(4000);
+      status <= "W4096";
+      writeStuff(4090);
       --assert (fifo_full = '1');
 
       wait for 1020 ns;
       wait until falling_edge(clock_100MHz);
       wait for 0.5 ns;
       
+      status <= "WR_1a";
       writeStuff(1);
+      wait for 100 ns;
 
+      status <= "WR_1b";
+      writeStuff(1);
+      wait for 100 ns;
+      
+      status <= "WR_4a";
+      writeStuff(4);
+      wait for 100 ns;
+      
+      status <= "WR_4b";
+      writeStuff(4);
       wait for 240 ns;
       
+      status <= "RD_1a";
       read(x"123456", temp);
       wait for 100 ns;
+      status <= "RD_1b";
       read(x"000100", temp);
+      status <= "RD_1c";
       read(x"000101", temp);
 
       wait for 100 ns;
       
+      status <= "WR_10";
+      writeStuff(10);
+      wait for 100 ns;
+      
+      status <= "RD_1d";
+      read(x"123456", temp);
+      wait for 100 ns;
+      status <= "RD_1e";
+      read(x"000100", temp);
+      status <= "WR_10";
+      writeStuff(10);
+      wait for 100 ns;
+      
+      status <= "RD_1e";
+      read(x"000101", temp);
+
       complete <= true;
 
       wait;

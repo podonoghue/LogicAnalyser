@@ -85,7 +85,7 @@ begin
    );   
    
    prescaler_proc:
-   process(selectDivider, clock_100MHz)
+   process(selectDivider, loopback_2, loopback_5, loopback_10, clock_100MHz)
       variable   pres   : std_logic;
    begin
       case (selectDivider) is

@@ -15,9 +15,9 @@ entity SDRAM_Controller is
       reset              : in    std_logic;
 
       -- Interface to issue reads or write data
+      cmd_wr_clear       : in    std_logic;
       cmd_wr             : in    std_logic;
       cmd_wr_data        : in    sdram_DataType;
-      cmd_wr_address     : in    sdram_AddrType;
       cmd_wr_accepted    : out   std_logic;
 
       cmd_rd             : in    std_logic;
@@ -44,17 +44,19 @@ end SDRAM_Controller;
 
 architecture Behavioral of SDRAM_Controller is
 
-   signal sdram_dataOut     : sdram_phy_DataType;
-   signal sdram_dataIn      : sdram_phy_DataType;
+   signal sdram_dataOut           : sdram_phy_DataType;
+   signal sdram_dataIn            : sdram_phy_DataType;
 
-   ------------------------------------------------------------------
-   -- !! Ensure that outputs and inputs are registered in the IOB. !!
-   -- !! Check the pinout report to be sure                        !!
-   -- !! RAS, CAS, WE, DQM, ADDR, BA = OFF                         !!
-   -- !! DATA                        = IFF OFF                     !!
-   -- !! CLK                         = ODDR                        !!
-   -- !! CS and CKE are static and will not be FFs                 !!
-   ------------------------------------------------------------------
+   signal wr_address              : sdram_AddrType;
+   signal increment_write_address : std_logic;
+
+   ----------------------------------------------------------------
+   -- Ensures that outputs and inputs are registered in the IOB.
+   -- RAS, CAS, WE, DQM, ADDR, BA = OFF                         
+   -- DATA                        = IFF OFF                     
+   -- CLK                         = ODDR                        
+   -- CS and CKE are static and will not be FFs                 
+   ----------------------------------------------------------------
    attribute IOB : string;
    attribute IOB of sdram_cke       : signal is "true";
    attribute IOB of sdram_cs_n      : signal is "true";
@@ -137,19 +139,22 @@ architecture Behavioral of SDRAM_Controller is
    constant READ_LATENCY       : natural := to_integer(unsigned(MODE_REG(5 downto 4)));  -- must agree with MODE_REG value
    signal data_ready_delay     : std_logic_vector(READ_LATENCY-1 downto 0);
 
+   signal write_pending : std_logic;
+   signal next_write_pending : std_logic;
+
 
    type StateType is (
       s_startup,
       s_refresh,
       s_idle_in_5, s_idle_in_4, s_idle_in_3, s_idle_in_2, s_idle_in_1,
       s_idle,
-      s_active, s_active1,
-      s_read1,  s_read2,  s_read_exit,
-      s_write1, s_write2, s_write3,
+      s_active,
+      s_pre_read, s_read1,  s_read2,  s_read_exit,
+      s_pre_write, s_write1, s_write2, s_write3,
       s_precharge
       );
 
-   signal state, nextState : StateType;
+   signal state, next_state : StateType;
 
    attribute FSM_ENCODING : string;
    attribute FSM_ENCODING of state : signal is "ONE-HOT";
@@ -178,46 +183,46 @@ architecture Behavioral of SDRAM_Controller is
    --
 
    -- Bit indexes used when splitting the address into row/colum/bank.
-   constant start_of_col       : natural :=  0;
-   constant start_of_bank      : natural :=  9;
-   constant start_of_row       : natural := 11;
+   constant start_of_col        : natural :=  0;
+   constant start_of_bank       : natural :=  9;
+   constant start_of_row        : natural := 11;
 
-   signal sdram_addr_sm        : sdram_phy_AddrType;
-   signal sdram_ba_sm          : sdram_phy_BankSelType;
-   signal sdram_dqm_sm         : sdram_phy_ByteSelType;
+   signal sdram_addr_sm         : sdram_phy_AddrType;
+   signal sdram_ba_sm           : sdram_phy_BankSelType;
+   signal sdram_dqm_sm          : sdram_phy_ByteSelType;
 
-   alias  sdram_col_address_sm : std_logic_vector is sdram_addr_sm(8 downto 0);
-   alias  sdram_row_address_sm : std_logic_vector is sdram_addr_sm(12 downto 0);
-   alias  sdram_precharge_sm   : std_logic        is sdram_addr_sm(10);
+   alias  sdram_col_address_sm  : std_logic_vector is sdram_addr_sm(8 downto 0);
+   alias  sdram_row_address_sm  : std_logic_vector is sdram_addr_sm(12 downto 0);
+   alias  sdram_precharge_sm    : std_logic        is sdram_addr_sm(10);
 
    -- The incoming addresses are split into these three values
-   alias  cmd_wr_col           : std_logic_vector is cmd_wr_address(start_of_bank-1  downto start_of_col);
-   alias  cmd_wr_bank          : std_logic_vector is cmd_wr_address(start_of_row-1   downto start_of_bank);
-   alias  cmd_wr_row           : std_logic_vector is cmd_wr_address(cmd_wr_address'left downto start_of_row);
+   alias  cmd_wr_col            : std_logic_vector is wr_address(start_of_bank-1  downto start_of_col);
+   alias  cmd_wr_bank           : std_logic_vector is wr_address(start_of_row-1   downto start_of_bank);
+   alias  cmd_wr_row            : std_logic_vector is wr_address(wr_address'left downto start_of_row);
 
-   alias  cmd_rd_col           : std_logic_vector is cmd_rd_address(start_of_bank-1  downto start_of_col);
-   alias  cmd_rd_bank          : std_logic_vector is cmd_rd_address(start_of_row-1   downto start_of_bank);
-   alias  cmd_rd_row           : std_logic_vector is cmd_rd_address(cmd_rd_address'left downto start_of_row);
+   alias  cmd_rd_col            : std_logic_vector is cmd_rd_address(start_of_bank-1  downto start_of_col);
+   alias  cmd_rd_bank           : std_logic_vector is cmd_rd_address(start_of_row-1   downto start_of_bank);
+   alias  cmd_rd_row            : std_logic_vector is cmd_rd_address(cmd_rd_address'left downto start_of_row);
 
-   signal cmd_rd_accepted_sm   : std_logic;
-   signal cmd_wr_accepted_sm   : std_logic;
+   signal cmd_rd_accepted_sm    : std_logic;
+   signal cmd_wr_accepted_sm    : std_logic;
 
    -- Signals to hold the last transaction to allow detection of bank and row changes
-   signal last_row             : std_logic_vector(sdram_row_address_sm'range);
-   signal last_bank            : sdram_phy_BankSelType;
-   --signal last_data_in         : std_logic_vector(cmd_wr_data'range);
+   signal last_row              : std_logic_vector(sdram_row_address_sm'range);
+   signal last_bank             : sdram_phy_BankSelType;
 
    -- Control when new transactions are accepted
-   signal back_to_back_possible : std_logic;
+   signal wr_back_to_back_ok : std_logic;
+   signal rd_back_to_back_ok : std_logic;
 
    -- Signal to control the Hi-Z state of the DQ bus
-   signal sdram_dq_hiz         : std_logic;
-   signal sdram_dq_hiz_sm      : std_logic;
+   signal sdram_dq_hiz          : std_logic;
+   signal sdram_dq_hiz_sm       : std_logic;
 
-   signal restartCounters      : std_logic;
-   signal rd_data_ready        : std_logic;
-   
-   signal sdram_data_90        : sdram_phy_DataType;
+   signal restart_counters      : std_logic;
+   signal rd_data_ready         : std_logic;
+
+   signal sdram_data_90         : sdram_phy_DataType;
 
    -------------------------------------------------------------
    -- Maps readable command names (for debug) to physical values
@@ -274,9 +279,9 @@ begin
    process (clock_100MHz)
    begin
       if rising_edge(clock_100MHz) then
-         if ((reset = '1') or (restartCounters = '1')) then
-            refresh_cycle_counter   <= (others => '0');
-            initialisation_counter  <= (others => '0');
+         if ((reset = '1') or (restart_counters = '1')) then
+            refresh_cycle_counter      <= (others => '0');
+            initialisation_counter     <= (others => '0');
          else
             if (forcing_refresh = '1') then
                refresh_cycle_counter   <= (others => '0');
@@ -296,10 +301,10 @@ begin
    begin
       if rising_edge(clock_100MHz_n) then
          if (reset = '1') then
-            sdram_data_90          <= (others => '0');
+            sdram_data_90     <= (others => '0');
          else
             if (rd_data_ready = '1') then
-               sdram_data_90       <= sdram_data;
+               sdram_data_90  <= sdram_data;
             end if;
          end if;
       end if;
@@ -322,7 +327,39 @@ begin
    Sdram_Sync_proc2:
    process (clock_100MHz)
    begin
+      -- Pipeline signals to/from SDRAM
       if rising_edge(clock_100MHz) then
+         state             <= next_state;
+         sdram_cs_n        <= cmd(command)(3);
+         sdram_ras_n       <= cmd(command)(2);
+         sdram_cas_n       <= cmd(command)(1);
+         sdram_we_n        <= cmd(command)(0);
+         sdram_addr        <= sdram_addr_sm;
+         sdram_ba          <= sdram_ba_sm;
+         sdram_dqm         <= sdram_dqm_sm;
+
+         sdram_dq_hiz      <= sdram_dq_hiz_sm;
+         sdram_dataOut     <= cmd_wr_data;
+
+         if (state = s_active) then
+            -- Capture the row and bank information for open row
+            last_row       <= sdram_row_address_sm;
+            last_bank      <= sdram_ba_sm;
+         end if;
+
+         -- Update shift registers used to choose when to present data from memory
+         data_ready_delay  <= '0' & data_ready_delay(data_ready_delay'left downto 1);
+         if (cmd_rd_accepted_sm = '1') then
+            data_ready_delay(data_ready_delay'left) <= '1';
+         end if;
+
+         -- Present delayed data from memory on command bus
+         if (data_ready_delay(0) = '1') then
+            rd_data_ready <= '1';
+         else
+            rd_data_ready <= '0';
+         end if;
+
          if (reset = '1') then
             state             <= s_startup;
             sdram_cs_n        <= '1';
@@ -336,66 +373,52 @@ begin
             sdram_dataOut     <= (others => '0');
             rd_data_ready     <= '0';
             data_ready_delay  <= (others => '0');
-         else
-            state             <= nextState;
-            sdram_cs_n        <= cmd(command)(3);
-            sdram_ras_n       <= cmd(command)(2);
-            sdram_cas_n       <= cmd(command)(1);
-            sdram_we_n        <= cmd(command)(0);
-            sdram_addr        <= sdram_addr_sm;
-            sdram_ba          <= sdram_ba_sm;
-            sdram_dqm         <= sdram_dqm_sm;
-
-            sdram_dq_hiz      <= sdram_dq_hiz_sm;
-            sdram_dataOut     <= cmd_wr_data;
-
-            if (state = s_active) then
-               -- Capture the row and bank information for open row
-               last_row       <= sdram_row_address_sm;
-               last_bank      <= sdram_ba_sm;
-            end if;
-
-            -- Update shift registers used to choose when to present data from memory
-            data_ready_delay  <= '0' & data_ready_delay(data_ready_delay'left downto 1);
-            if (cmd_rd_accepted_sm = '1') then
-               data_ready_delay(data_ready_delay'left) <= '1';
-            end if;
-
-            -- Present delayed data from memory on command bus
-            if (data_ready_delay(0) = '1') then
-               rd_data_ready <= '1';
-            else
-               rd_data_ready <= '0';
-            end if;
          end if;
+
+         if (reset = '1') then
+            write_pending <= '0';
+         else
+            write_pending <= next_write_pending;
+         end if;
+
+         if ((reset = '1') or (cmd_wr_clear = '1')) then
+            wr_address        <= (others => '0');
+         elsif (increment_write_address = '1') then
+            wr_address <= std_logic_vector(unsigned(wr_address) + 1);
+         end if;
+
       end if;
    end process;
 
    -- 3-state buffers for SDRAM data I/O
    sdram_data <= sdram_dataOut when (sdram_dq_hiz = '0') else (others => 'Z');
 
-   back_to_back_possible <= '1' when ((last_bank = cmd_wr_bank) and (last_row = cmd_wr_row)) else '0';
+   wr_back_to_back_ok <= '1' when ((last_bank = cmd_wr_bank) and (last_row = cmd_wr_row)) else '0';
+   rd_back_to_back_ok <= '1' when ((last_bank = cmd_rd_bank) and (last_row = cmd_rd_row)) else '0';
 
    main_proc:
    process(
       state, initialisation_counter,
-      cmd_wr_address, cmd_rd_address, cmd_wr, cmd_rd, back_to_back_possible, forcing_refresh, pending_refresh)
+      wr_address, cmd_rd_address, cmd_wr, cmd_rd, wr_back_to_back_ok, 
+      rd_back_to_back_ok, forcing_refresh, pending_refresh, write_pending)
 
    begin
       ---------------------------------
       -- Default is to do nothing
       ---------------------------------
-      command             <= C_NOP;
-      sdram_addr_sm       <= (others => '0');
-      sdram_ba_sm         <= (others => '0');
-      sdram_dqm_sm        <= (others => '1');
-      sdram_dq_hiz_sm     <= '1';
-      initializing        <= '0';
-      cmd_rd_accepted_sm  <= '0';
-      cmd_wr_accepted_sm  <= '0';
-      restartCounters     <= '0';
-      nextState           <= state;
-      sdram_cke           <= '1';
+      command                 <= C_NOP;
+      sdram_addr_sm           <= (others => '0');
+      sdram_ba_sm             <= (others => '0');
+      sdram_dqm_sm            <= (others => '1');
+      sdram_dq_hiz_sm         <= '1';
+      initializing            <= '0';
+      cmd_rd_accepted_sm      <= '0';
+      cmd_wr_accepted_sm      <= '0';
+      restart_counters        <= '0';
+      next_state              <= state;
+      sdram_cke               <= '1';
+      increment_write_address <= '0';
+      next_write_pending      <= write_pending;
 
       case state is
          when s_startup =>
@@ -425,44 +448,44 @@ begin
             -- All the commands during the startup are NOPS, except these
             if (initialisation_counter = do_precharge_count) and (forcing_refresh = '1') then
                -- Ensure all rows are closed
-               command         <= C_PRECHARGE;
+               command          <= C_PRECHARGE;
                sdram_precharge_sm <= '1';  -- all banks
-               sdram_ba_sm     <= (others => '0');
+               sdram_ba_sm      <= (others => '0');
             elsif (initialisation_counter = do_refresh1_count) and (forcing_refresh = '1') then
                -- Refresh cycle
-               command         <= C_REFRESH;
+               command          <= C_REFRESH;
             elsif (initialisation_counter = do_refresh2_count) and (forcing_refresh = '1') then
                -- Refresh cycle
-               command         <= C_REFRESH;
+               command          <= C_REFRESH;
             elsif (initialisation_counter = do_mode_reg_count) and (forcing_refresh = '1') then
                -- Now load the mode register
-               command         <= C_LOAD_MODE_REG;
-               sdram_addr_sm   <= MODE_REG;
+               command          <= C_LOAD_MODE_REG;
+               sdram_addr_sm    <= MODE_REG;
             elsif (initialisation_counter = init_complete_count) and (forcing_refresh = '1')  then
-               restartCounters <= '1';
-               nextState       <= s_idle_in_2;
+               restart_counters <= '1';
+               next_state       <= s_idle_in_2;
             end if;
 
          when s_refresh =>
             command         <= C_REFRESH;
-            restartCounters <= '1';
-            nextState       <= s_idle_in_5;
+            restart_counters <= '1';
+            next_state       <= s_idle_in_5;
 
          -- s_idle_in_5,4,3,2,1,s_idle satisfy tRFC > 66 ns (-7E, -75)
          when s_idle_in_5 =>
-            nextState <= s_idle_in_4;
+            next_state <= s_idle_in_4;
 
          when s_idle_in_4 =>
-            nextState <= s_idle_in_3;
+            next_state <= s_idle_in_3;
 
          when s_idle_in_3 =>
-            nextState <= s_idle_in_2;
+            next_state <= s_idle_in_2;
 
          when s_idle_in_2 =>
-            nextState <= s_idle_in_1;
+            next_state <= s_idle_in_1;
 
          when s_idle_in_1 =>
-            nextState <= s_idle;
+            next_state <= s_idle;
 
          when s_idle =>
             -- Priority is to issue a refresh if one is outstanding
@@ -471,36 +494,34 @@ begin
                -- Start the refresh cycle.
                -- This tasks tRFC (66ns), so 6 idle cycles are needed @ 100MHz
                ----------------------------------------------------------------
-               nextState <= s_refresh;
+               next_state <= s_refresh;
             elsif ((cmd_wr = '1') or (cmd_rd = '1')) then
                ----------------------------------
                -- Start the read or write cycle.
                -- First task is to open the row
                ----------------------------------
-               nextState <= s_active;
+               next_state <= s_active;
             end if;
 
          ---------------------------------------------
          -- Opening the row ready for reads or writes
          ---------------------------------------------
          when s_active =>
-            nextState            <= s_active1;
-            command              <= C_ACTIVE;
-            if (cmd_wr = '1') then
+            command            <= C_ACTIVE;
+            if ((cmd_wr = '1') or (write_pending = '1')) then
+               -- Give preference to new writes or a pending one still to do
+               next_state           <= s_pre_write;
                sdram_row_address_sm <= cmd_wr_row;
                sdram_ba_sm          <= cmd_wr_bank;
             else
+               next_state           <= s_pre_read;
                sdram_row_address_sm <= cmd_rd_row;
                sdram_ba_sm          <= cmd_rd_bank;
             end if;
 
-         when s_active1 =>
+         when s_pre_read =>
             -- Satisfies tRD = 20ns = 2cy
-            if (cmd_wr = '1') then
-               nextState         <= s_write1;
-            else
-               nextState         <= s_read1;
-            end if;
+            next_state         <= s_read1;
 
          -----------------------------------------
          -- Processing the read transaction
@@ -508,29 +529,57 @@ begin
          -- s_read2 will be a NOP for single-read
          -----------------------------------------
          when s_read1 =>
-            nextState            <= s_read_exit;
+            -- We know:
+            --   rd_back_to_back_ok is invalid
+            --   Must do a read
+            next_state           <= s_read2;
             command              <= C_READ;
             sdram_ba_sm          <= cmd_rd_bank;
             sdram_col_address_sm <= cmd_rd_col;
             sdram_dqm_sm         <= (others => '0');
             cmd_rd_accepted_sm   <= '1';
-            nextState            <= s_read2;
 
          when s_read2 =>
-            nextState <= s_read_exit;
+            next_state <= s_read2;
 
-            if ((forcing_refresh = '0') and (back_to_back_possible = '1') and
-                (cmd_wr = '0') and (cmd_rd = '1')) then
+            if ((cmd_rd = '1') and (rd_back_to_back_ok = '1')) then
+               -- We can do a read now
                command              <= C_READ;
                sdram_ba_sm          <= cmd_rd_bank;
                sdram_col_address_sm <= cmd_rd_col;
                sdram_dqm_sm         <= (others => '0');
                cmd_rd_accepted_sm   <= '1';
-               nextState            <= s_read2;
+            end if;
+
+            if (forcing_refresh = '1') then
+               -- Must do a refresh next
+               next_state <= s_read_exit;
+            end if;
+            
+            if ((cmd_rd = '1') and (rd_back_to_back_ok = '0')) then
+               -- Must change row/bank for read
+               next_state <= s_read_exit;
+            end if;
+
+            if ((cmd_wr = '1') and (cmd_rd = '0')) then
+               -- Might as well do the read next
+               next_state <= s_read_exit;
             end if;
 
          when s_read_exit =>
-            nextState    <= s_precharge;
+            next_state   <= s_precharge;
+
+         -----------------------------------------------------
+         -- This piplines the writes from the FIFO
+         -----------------------------------------------------
+         when s_pre_write =>
+            -- Satisfies tRD = 20ns = 2cy
+            next_state         <= s_write1;
+            if (write_pending = '0') then
+               -- Get new data ahead of write as needed
+               cmd_wr_accepted_sm   <= '1';
+               next_write_pending   <= '1';
+            end if;
 
          -----------------------------------------------------
          -- Processing the write transaction
@@ -538,39 +587,103 @@ begin
          -- s_write2, s_write3 will be a NOPs for single-write
          -----------------------------------------------------
          when s_write1 =>
-            command              <= C_WRITE;
-            sdram_ba_sm          <= cmd_wr_bank;
-            sdram_col_address_sm <= cmd_wr_col;
-            sdram_dqm_sm         <= (others => '0');
-            sdram_dq_hiz_sm      <= '0';
-            cmd_wr_accepted_sm   <= '1';
-            nextState            <= s_write2;
+            next_state              <= s_write2;
+
+            -- We know:
+            --    write_pending = '1'
+            --    wr_back_to_back_ok is invalid
+
+            -- Do write now
+            command                 <= C_WRITE;
+            sdram_ba_sm             <= cmd_wr_bank;
+            sdram_col_address_sm    <= cmd_wr_col;
+            sdram_dqm_sm            <= (others => '0');
+            sdram_dq_hiz_sm         <= '0';
+            increment_write_address <= '1';
+            next_write_pending      <= '0';
+
+            if (cmd_wr = '1') then
+               -- Always accept a word to write if available
+               cmd_wr_accepted_sm   <= '1';
+               next_write_pending   <= '1';
+            end if;
 
          when s_write2 =>
-            nextState <= s_write3;
+            next_state <= s_write3;
 
-            if ((forcing_refresh = '0') and (back_to_back_possible = '1') and
-                (cmd_wr = '1')) then
-               command              <= C_WRITE;
-               sdram_ba_sm          <= cmd_wr_bank;
-               sdram_col_address_sm <= cmd_wr_col;
-               sdram_dqm_sm         <= (others => '0');
-               sdram_dq_hiz_sm      <= '0';
-               cmd_wr_accepted_sm   <= '1';
+            -- Situation:
+            --    We may have some data (write_pending)
+            --    wr_back_to_back_ok is valid
+            if (write_pending = '1') and (wr_back_to_back_ok = '1') then
+               -- Do write now
+               command                 <= C_WRITE;
+               sdram_ba_sm             <= cmd_wr_bank;
+               sdram_col_address_sm    <= cmd_wr_col;
+               sdram_dqm_sm            <= (others => '0');
+               sdram_dq_hiz_sm         <= '0';
+               increment_write_address <= '1';
+               next_write_pending      <= '0';
+
+               if (cmd_wr = '1') then
+                  -- Accept new data if available
+                  cmd_wr_accepted_sm   <= '1';
+                  next_write_pending   <= '1';
+               end if;
+            end if;
+
+            if (cmd_wr = '1') and (write_pending = '0') then
+               -- Accept new data if available and needed
+               cmd_wr_accepted_sm      <= '1';
+               next_write_pending      <= '1';
             end if;
 
          when s_write3 =>
-            nextState <= s_precharge;
+            next_state <= s_write3;
 
-            if ((forcing_refresh = '0') and (back_to_back_possible = '1') and
-                (cmd_wr = '1')) then
-               command              <= C_WRITE;
-               sdram_ba_sm          <= cmd_wr_bank;
-               sdram_col_address_sm <= cmd_wr_col;
-               sdram_dqm_sm         <= (others => '0');
-               sdram_dq_hiz_sm      <= '0';
-               cmd_wr_accepted_sm   <= '1';
-               nextState            <= s_write3;
+            -- Situation:
+            --    We may have some data (write_pending)
+            --    wr_back_to_back_ok is valid
+            if (write_pending = '1') and (wr_back_to_back_ok = '1') then
+               -- Do write now
+               command                 <= C_WRITE;
+               sdram_ba_sm             <= cmd_wr_bank;
+               sdram_col_address_sm    <= cmd_wr_col;
+               sdram_dqm_sm            <= (others => '0');
+               sdram_dq_hiz_sm         <= '0';
+               increment_write_address <= '1';
+               next_write_pending      <= '0';
+
+               if (cmd_wr = '1') then
+                  -- Accept new data if available
+                  cmd_wr_accepted_sm   <= '1';
+                  next_write_pending   <= '1';
+               end if;
+            end if;
+
+            if (cmd_wr = '1') and (write_pending = '0') then
+               -- Accept new data if available and needed
+               cmd_wr_accepted_sm      <= '1';
+               next_write_pending      <= '1';
+            end if;
+
+            if (forcing_refresh = '1') then
+               -- Must do a refresh!
+               next_state   <= s_precharge;
+            end if;
+
+            if ((write_pending = '0') and (cmd_rd = '1')) then
+               -- Might as well do the read
+               next_state   <= s_precharge;
+            end if;
+
+            if (wr_back_to_back_ok = '0') then
+               -- Must change row/bank for this write
+               next_state   <= s_precharge;
+            end if;
+
+            if ((write_pending = '0') and (pending_refresh = '1')) then
+               -- Might as well do an early refresh
+               next_state   <= s_precharge;
             end if;
 
          -----------------------------------------------
@@ -578,7 +691,7 @@ begin
          -----------------------------------------------
          when s_precharge =>
             command     <= C_PRECHARGE;
-            nextState   <= s_idle;
+            next_state  <= s_idle;
 
       end case;
    end process;

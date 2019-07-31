@@ -19,12 +19,12 @@ architecture behavior of fifo_tb is
 
  	--outputs
    signal fifo_data_out    : SampleDataType;
-   signal fifo_empty : std_logic;
-   signal fifo_full  : std_logic;
+   signal fifo_not_empty   : std_logic;
+   signal fifo_full        : std_logic;
 
    -- clock
-   constant clock_period      : time    := 10 ns;
-   signal   complete          : boolean := false;
+   constant clock_period   : time    := 10 ns;
+   signal   complete       : boolean := false;
 
 begin
  
@@ -32,16 +32,16 @@ begin
 fifo_uut:
    entity fifo 
    port map (
-       clock         => clock,
-       reset         => reset,
+       clock           => clock,
+       reset           => reset,
+                       
+       fifo_full       => fifo_full,
+       fifo_wr_en      => fifo_wr_en,
+       fifo_data_in    => fifo_data_in,
        
-       fifo_full     => fifo_full,
-       fifo_wr_en    => fifo_wr_en,
-       fifo_data_in  => fifo_data_in,
-       
-       fifo_empty    => fifo_empty,
-       fifo_rd_en    => fifo_rd_en,
-       fifo_data_out => fifo_data_out
+       fifo_not_empty  => fifo_not_empty,
+       fifo_rd_en      => fifo_rd_en,
+       fifo_data_out   => fifo_data_out
      );
 
    clock_100MHz_process :
@@ -61,7 +61,7 @@ fifo_uut:
    StimProc: 
    process
    
-      variable writeCounter : SampleDataType := (others => '0');
+      variable writeCounter : SampleDataType := std_logic_vector(to_unsigned(10, SampleDataType'length));
       variable stuffRead    : SampleDataType := (others => 'Z');
       
       procedure writeStuff(count : natural) is
@@ -95,12 +95,16 @@ fifo_uut:
       wait until falling_edge(clock);
       wait for 0.5 ns;
       
-      writeStuff(16);
+      writeStuff(5);
+      assert (fifo_not_empty = '1');
+      readStuff(4);
+      
+      writeStuff(15);
       assert (fifo_full = '1');
-      assert (fifo_empty = '0');
+      assert (fifo_not_empty = '1');
       readStuff(16);
       assert (fifo_full = '0');
-      assert (fifo_empty = '1');
+      assert (fifo_not_empty = '0');
       
       wait for 100 ns;
       complete <= true;

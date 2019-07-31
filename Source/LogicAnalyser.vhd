@@ -59,11 +59,13 @@ architecture Behavioral of LogicAnalyser is
    signal cmd_rd                       : std_logic;
    signal cmd_rd_data                  : sdram_phy_DataType;
    signal cmd_rd_data_ready            : std_logic;
-   signal cmd_wr_address               : sdram_AddrType;
+   signal cmd_wr_clear                 : std_logic;
    signal cmd_rd_address               : sdram_AddrType;
    signal increment_read_address       : std_logic;
-                                       
-   constant cmd_wr_address_mid         : sdram_AddrType := (cmd_wr_address'left=>'1', others => '0');
+                        
+   signal cmd_wr_counter               : sdram_AddrType;
+   
+   constant cmd_wr_address_mid         : sdram_AddrType := (sdram_AddrType'left=>'1', others => '0');
    constant cmd_wr_address_max         : sdram_AddrType := (5=>'1', others => '0');
                                        
    signal cmd_rd_accepted              : std_logic;
@@ -111,13 +113,12 @@ architecture Behavioral of LogicAnalyser is
    alias  selectDivider                : std_logic_vector is controlRegister(4 downto 3);   
    alias  selectDecade                 : std_logic_vector is controlRegister(6 downto 5);   
                                        
-   signal fifo_empty                   : std_logic;
-   signal fifo_full                    : std_logic;
+   signal fifo_not_empty                   : std_logic;
+   --signal fifo_full                    : std_logic;
    signal fifo_wr_en                   : std_logic;
    signal fifo_rd_en                   : std_logic;
    signal fifo_data_in                 : SampleDataType;
    signal fifo_data_out                : SampleDataType;
-   signal fifo_not_empty               : std_logic;
                                        
    signal data_count                   : natural range 0 to 255;
    signal decrement_data_count         : std_logic;
@@ -179,16 +180,14 @@ begin
 		clock          => clock_100MHz,
 		reset          => reset,
       
-		fifo_full      => fifo_full,
+		fifo_full      => open,
 		fifo_wr_en     => doSample,
 		fifo_data_in   => currentSample,
 		
-      fifo_empty     => fifo_empty,
+      fifo_not_empty => fifo_not_empty,
 		fifo_rd_en     => fifo_rd_en,
 		fifo_data_out  => fifo_data_out
 	);
-
-   fifo_not_empty    <= not fifo_empty;
 
    armed     <= '1' when (tState = t_armed) else '0';
    armed_o   <= armed;
@@ -203,13 +202,16 @@ begin
    begin
       if rising_edge(clock_100MHz) then
    
+         cmd_wr_clear <= '0';
          if (write_control_reg = '1') then
             controlRegister <= host_receive_data(controlRegister'left downto controlRegister'right);
          end if;
          
          case (tState) is
             when t_idle =>
-               cmd_wr_address <= (others => '0');
+               cmd_wr_clear   <= '1';
+               cmd_wr_counter <= (others => '0');
+               
                if (controlReg_start_acq = '1') then
                   controlReg_start_acq <= '0';
                   tState               <= t_armed;
@@ -217,17 +219,14 @@ begin
                
             when t_armed =>
                if (doSample = '1') then
-                  cmd_wr_address <= std_logic_vector(unsigned(cmd_wr_address) + 1);
+                  cmd_wr_counter <= std_logic_vector(unsigned(cmd_wr_counter) + 1);
                end if;
                if (triggerFound = '1') then
                   tState <= t_running;
                end if;
  
             when t_running =>
-               if (doSample = '1') then
-                  cmd_wr_address <= std_logic_vector(unsigned(cmd_wr_address) + 1);
-               end if;
-               if (cmd_wr_address = cmd_wr_address_max) then
+               if (cmd_wr_counter = cmd_wr_address_max) then
                   tState <= t_complete;
                end if;
                
@@ -262,9 +261,9 @@ begin
       clock_100MHz_n    => clock_100MHz_n,
       reset             => reset,
 
+      cmd_wr_clear      => cmd_wr_clear,
       cmd_wr            => fifo_not_empty,
       cmd_wr_data       => fifo_data_out,
-      cmd_wr_address    => cmd_wr_address,
       cmd_wr_accepted   => fifo_rd_en,
 
       cmd_rd            => cmd_rd,

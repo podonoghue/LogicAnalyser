@@ -44,6 +44,8 @@ ARCHITECTURE behavior OF LogicAnalyser_tb IS
    signal   complete            : boolean := false;
    signal   writeLutsComplete   : boolean := false;
 
+   signal   status : string(1 to 6);
+   
 begin
  
    sdram_entity:
@@ -274,34 +276,43 @@ begin
    variable receiveData : DataBusType;
    
    begin
+      status <= "Reset ";
+   
       if (reset = '1') then
          wait until (reset = '0');
       end if;  
       wait for 60 ns;
       
+      status <= "LUTs  ";
       for index in stimulus'range loop
          sendToAnalyser(stimulus(index));
       end loop;
 
+      status <= "Init  ";
       if (initializing = '1') then
          wait until (initializing = '0');
       end if;
       
+      status <= "Read20";
       sendToAnalyser(C_RD_BUFFER);
       sendToAnalyser(std_logic_vector(to_unsigned(20, 8)));
       
+      status <= "Data20";
       for index in 1 to 2*20 loop
          receiveFromAnalyser(receiveData);
       end loop;
 
+      status <= "ClrCnt";
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
       sendToAnalyser(C_CONTROL_CLEAR_COUNTS);
 
+      status <= "Idle  ";
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
       sendToAnalyser("00000000");
 
+      status <= "Read20";
       sendToAnalyser(C_RD_BUFFER);
       sendToAnalyser(std_logic_vector(to_unsigned(20, 8)));
       
@@ -309,14 +320,17 @@ begin
          receiveFromAnalyser(receiveData);
       end loop;
 
+      status <= "Spd50n";
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
       sendToAnalyser(C_CONTROL_S_50ns);
 
+      status <= "Enable";
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
       sendToAnalyser(C_CONTROL_ENABLE or C_CONTROL_S_50ns);
 
+      status <= "Done  ";
       writeLutsComplete <= true;
       wait;
    end process;

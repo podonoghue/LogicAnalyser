@@ -40,12 +40,11 @@ end FIFO_SDRAM;
 
 architecture Behavioral of FIFO_SDRAM is
 
-signal fifo_empty     : std_logic;
 signal fifo_rd_en     : std_logic;
 signal fifo_not_empty : std_logic;
 signal fifo_data_out  : SampleDataType;
 
-signal sdramAddress   : sdram_AddrType; 
+signal cmd_wr_clear   : std_logic; 
 
 begin
 
@@ -59,24 +58,11 @@ begin
 		fifo_wr_en     => fifo_wr_en,
 		fifo_data_in   => fifo_data_in,
 
-		fifo_empty     => fifo_empty,
+		fifo_not_empty => fifo_not_empty,
 		fifo_rd_en     => fifo_rd_en,		
       fifo_data_out  => fifo_data_out
 	);
 
-   fifo_not_empty    <= not fifo_empty;
-
-   process (clock_100MHz)
-   begin
-      if rising_edge(clock_100MHz) then
-         if (reset = '1') then
-            sdramAddress <= x"fffff0";
-         elsif (fifo_rd_en = '1') then
-            sdramAddress <= std_logic_vector(unsigned(sdramAddress) + 1);
-         end if;
-      end if;
-   end process;
-   
    SDRAM_Controller_inst :
    entity work.SDRAM_Controller
    port map(
@@ -84,14 +70,14 @@ begin
       clock_100MHz_n    => clock_100MHz_n,
       reset             => reset,
                         
+      cmd_wr_clear      => '0',
       cmd_wr            => fifo_not_empty,
       cmd_wr_data       => fifo_data_out,
-      cmd_wr_address    => sdramAddress,
       cmd_wr_accepted   => fifo_rd_en,
                         
       cmd_rd            => cmd_rd,
       cmd_rd_data       => cmd_rd_data,
-      cmd_rd_address    => sdramAddress,
+      cmd_rd_address    => (others => '0'),
       cmd_rd_accepted   => cmd_rd_accepted,
       cmd_rd_data_ready => cmd_rd_data_ready,
       

@@ -58,7 +58,7 @@ package LogicAnalyserPackage is
    -- Triggering
 
    -- Maximum number of steps in complex trigger sequence
-   constant MAX_TRIGGER_STEPS  : positive := 4; -- Actual 16; -- Testing 4
+   constant MAX_TRIGGER_STEPS  : positive := 16; -- Actual 16; -- Testing 4
 
    -- Type for a trigger iteration
    subtype TriggerRangeType    is unsigned(3 downto 0);

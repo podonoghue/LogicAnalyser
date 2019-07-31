@@ -13,13 +13,13 @@ use work.logicanalyserpackage.all;
 --  {name: 'dataIn',     wave: 'x3x45x...', data:["d0","d1","d2","d3"]},
 --  {name: 'tail',       wave: '=.=.==...', data:["0","1","2","3"]},
 --  {name: 'fifo_wr_en',      wave: '0101.0...'},
---  {name: 'fifo_empty',      wave: '1.0....1.'},
+--  {name: 'fifo_not_empty',      wave: '1.0....1.'},
 --  {name: 'head',       wave: '=...=.==.', data:["0","1","2","3"]},
 --  {name: 'fifo_rd_en',      wave: '0..101.0.'},
 --  {name: 'dataOut',    wave: 'xx3.4.5x.', data:["d0","d1","d2"]},
 --  {name: 'fifo_full',       wave: '0........'}],  
 --   head:{
---   text:'Example 1 - Near fifo_empty',
+--   text:'Example 1 - Near fifo_not_empty',
 --   tick:0,
 -- },
 --  config: {hscale: 1},
@@ -31,7 +31,7 @@ use work.logicanalyserpackage.all;
 --  {name: 'dataIn',     wave: 'x3x45x...', data:["d0","d1","d2"]},
 --  {name: 'tail',       wave: '=.=.==...', data:["8","9","10","11"]},
 --  {name: 'fifo_wr_en',      wave: '0101.0...'},
---  {name: 'fifo_empty',      wave: '0........'},
+--  {name: 'fifo_not_empty',      wave: '0........'},
 --  {name: 'head',       wave: '=....===.', data:["10","11","12","13"]},
 --  {name: 'fifo_rd_en',      wave: '0...1..0.'},
 --  {name: 'dataOut',    wave: '5....435.', data:["d7","d8","d9","d10"]},
@@ -46,22 +46,22 @@ use work.logicanalyserpackage.all;
 
 entity fifo is
    port ( 
-      clock         : in   std_logic;
-      reset         : in   std_logic;
+      clock          : in   std_logic;
+      reset          : in   std_logic;
       
-      fifo_full     : out  std_logic;
-      fifo_wr_en    : in   std_logic;
-      fifo_data_in  : in   SampleDataType;
+      fifo_full      : out  std_logic;
+      fifo_wr_en     : in   std_logic;
+      fifo_data_in   : in   SampleDataType;
       
-      fifo_empty    : out  std_logic;
-      fifo_rd_en    : in   std_logic;
-      fifo_data_out : out  SampleDataType      
+      fifo_not_empty : out  std_logic;
+      fifo_rd_en     : in   std_logic;
+      fifo_data_out  : out  SampleDataType      
    );
 end fifo;
 
 architecture behavioral of fifo is
    
-   constant RAM_BITS : natural := 10;
+   constant RAM_BITS : natural := 10; -- 10; -- debug 4
    constant RAM_SIZE : natural := 2**RAM_BITS;
    subtype FifoAddressType is unsigned(RAM_BITS-1 downto 0);
    
@@ -76,8 +76,8 @@ architecture behavioral of fifo is
    
 begin
 
-   fifo_empty <= isEmpty;
-   fifo_full  <= isFull;
+   fifo_not_empty <= not isEmpty;
+   fifo_full      <= isFull;
    
    RamProc:
    process (clock)
@@ -93,6 +93,7 @@ begin
             writeAddress <= writeAddress + 1;
          end if;
          if ((fifo_rd_en = '1') and (isEmpty = '0')) then
+            fifo_data_out <= ram(to_integer(readAddress));
             if (readAddress = writeAddress-1) and (fifo_wr_en = '0') then
                isEmpty <= '1';
             end if;
@@ -107,8 +108,6 @@ begin
          end if;
       end if;
    end process;
-   
-   fifo_data_out <= ram(to_integer(readAddress));
 						
 end behavioral;
 
