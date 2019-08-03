@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
- 
+use ieee.numeric_std.all;
+
 library unisim;
 use unisim.vcomponents.all;
 
@@ -10,7 +11,7 @@ use work.LogicAnalyserPackage.all;
 entity LogicAnalyserWrapper is
    port ( 
       reset_n        : in    std_logic;
-      clock_32MHz    : in    std_logic;
+      clock_50MHz    : in    std_logic;
 
       -- Bus interface
       ft2232h_rxf_n  : in    std_logic;      -- Rx FIFO Full
@@ -35,7 +36,9 @@ entity LogicAnalyserWrapper is
       sdram_dqm      : out   std_logic_vector(1 downto 0);
       sdram_addr     : out   std_logic_vector(12 downto 0);
       sdram_ba       : out   std_logic_vector(1 downto 0);
-      sdram_data     : inout std_logic_vector(15 downto 0)     
+      sdram_data     : inout std_logic_vector(15 downto 0);
+
+      heartbeat      : out   std_logic
   );
 end entity;
  
@@ -46,9 +49,14 @@ signal clock_100MHz       : std_logic;
 signal clock_100MHz_n     : std_logic;
 signal clock_200MHz       : std_logic;
 
+signal heartbeatFFs       : unsigned(24 downto 0);
+
 begin
    reset <= not reset_n when rising_edge(clock_100MHz);
    
+   heartbeat    <= heartbeatFFs(heartbeatFFs'left) and not reset;
+   heartbeatFFs <= (heartbeatFFs + 1) when rising_edge(clock_100MHz);
+
    LogicAnalyser_inst :
    entity work.LogicAnalyser
    port map ( 
@@ -89,7 +97,7 @@ begin
    entity work.DigitalClockManager
    port map   (
       -- Clock in ports
-      clk_in1 => clock_32MHz,
+      clk_in1 => clock_50MHz,
       
       -- Clock out ports
       clk_out1 => clock_200MHz,

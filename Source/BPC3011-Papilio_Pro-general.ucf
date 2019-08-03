@@ -33,7 +33,8 @@ NET "clock_32MHz"  LOC = P94 |IOSTANDARD = "LVTTL";                             
 
 #NET rx             LOC="P101" | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=FAST;          # RX
 #NET tx             LOC="P105" | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=FAST | PULLUP; # TX
-#NET A(0)           LOC="P48"  | IOSTANDARD=LVTTL;                                # A0
+
+NET heartbeat       LOC="P48"  | IOSTANDARD=LVTTL;                                # A0
 #NET A(1)           LOC="P51"  | IOSTANDARD=LVTTL;                                # A1
 #NET A(2)           LOC="P56"  | IOSTANDARD=LVTTL;                                # A2
 #NET A(3)           LOC="P58"  | IOSTANDARD=LVTTL;                                # A3
@@ -49,6 +50,7 @@ NET "clock_32MHz"  LOC = P94 |IOSTANDARD = "LVTTL";                             
 #NET A(13)          LOC="P93"  | IOSTANDARD=LVTTL;                                # A13
 #NET A(14)          LOC="P98"  | IOSTANDARD=LVTTL;                                # A14
 #NET A(15)          LOC="P100" | IOSTANDARD=LVTTL;                                # A15
+
 #NET B(0)           LOC="P99"  | IOSTANDARD=LVTTL;                                # B0
 #NET B(1)           LOC="P97"  | IOSTANDARD=LVTTL;                                # B1
 #NET B(2)           LOC="P92"  | IOSTANDARD=LVTTL;                                # B2
@@ -77,11 +79,11 @@ NET ft2232h_data(7) LOC="P121" | IOSTANDARD=LVTTL;                              
 #NET C(8)           LOC="P123" | IOSTANDARD=LVTTL;                                # C8
 #NET sampling       LOC="P124" | IOSTANDARD=LVTTL;                                # C9
 NET reset_n         LOC="P126" | IOSTANDARD=LVTTL;                                # C10
-NET ft2232h_siwu_n  LOC="P127" | IOSTANDARD=LVTTL;                                # C11
-NET ft2232h_rxf_n   LOC="P131" | IOSTANDARD=LVTTL;                                # C12
+NET ft2232h_rxf_n   LOC="P127" | IOSTANDARD=LVTTL;                                # C11
+NET ft2232h_txe_n   LOC="P131" | IOSTANDARD=LVTTL;                                # C12
 NET ft2232h_rd_n    LOC="P132" | IOSTANDARD=LVTTL;                                # C13
-NET ft2232h_txe_n   LOC="P133" | IOSTANDARD=LVTTL;                                # C14
-NET ft2232h_wr_n    LOC="P134" | IOSTANDARD=LVTTL;                                # C15
+NET ft2232h_wr_n    LOC="P133" | IOSTANDARD=LVTTL;                                # C14
+NET ft2232h_siwu_n  LOC="P134" | IOSTANDARD=LVTTL;                                # C15
      
 NET sdram_addr(0)   LOC="P140" | IOSTANDARD=LVTTL;                                # SDRAM_ADDR0
 NET sdram_addr(1)   LOC="P139" | IOSTANDARD=LVTTL;                                # SDRAM_ADDR1

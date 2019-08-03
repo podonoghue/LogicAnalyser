@@ -129,7 +129,7 @@ int main(int argc, const char *argv[]) {
 
    FT_STATUS ftStatus;
 
-   uint8_t txBuffer[] = {0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, };
+   uint8_t txBuffer[] = {0xAA, 0x55, 1,2,3,4,5,6,7,8,9, 0xAA, 0x55, };
    unsigned long bytesWritten;
 
    FT_HANDLE ftHandle = openDevice();
@@ -145,14 +145,14 @@ int main(int argc, const char *argv[]) {
       ftStatus = FT_Write(ftHandle, txBuffer, sizeof(txBuffer), &bytesWritten);
       if (ftStatus == FT_OK) {
          if (bytesWritten > 0) {
-            printf(".");
+//            printf(".");
             if (col++==60) {
                col = 0;
-               printf("\n");
+//               printf("\n");
             }
             //            printf("\nbytesWritten = %ld\n", bytesWritten);
          }
-         fflush(stdout);
+//         fflush(stdout);
          //         printf("FT_Write() OK\n");
       } else {
          fprintf(stderr, "\nFT_Write() failed\n");
