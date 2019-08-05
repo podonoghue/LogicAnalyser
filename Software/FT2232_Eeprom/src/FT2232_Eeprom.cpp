@@ -296,7 +296,7 @@ int main(int argc, const char *argv[]) {
       if (key != 0) {
          programMode = a_read;
       }
-      key = strstr(programName, "verifydEeprom");
+      key = strstr(programName, "verifyEeprom");
       if (key != 0) {
          programMode = a_verify;
       }

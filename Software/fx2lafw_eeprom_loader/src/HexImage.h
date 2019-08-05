@@ -201,6 +201,13 @@ public:
       printArray(image, getSize());
    }
 
+   /**
+    * Indexing of the inetrnal array
+    *
+    * @param index Array index
+    *
+    * @return reference to element
+    */
    uint8_t &operator[](unsigned index) {
       if (index >= getSize()) {
          throw MyException("Array index out of range");
@@ -292,7 +299,7 @@ public:
 
       FILE *fp = fopen(filename, "wt");
       if (fp == nullptr) {
-         throw MyException("Unable to open hex file for saving '%s'", filename);
+         throw MyException("Unable to open C file for saving '%s'", filename);
       }
 
       uint16_t address        = 0x0000;

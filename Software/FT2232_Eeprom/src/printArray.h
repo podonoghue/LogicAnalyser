@@ -51,7 +51,7 @@ void printArray(T *data, uint32_t size, uint32_t visibleIndex=0) {
    size += offset;
    for (unsigned index=0; index<size; index++) {
       if (needNewline) {
-         printf("%0*X: ", width, visibleIndex+index*sizeof(T));
+         printf("%0*lX: ", width, (long unsigned int)(visibleIndex+index*sizeof(T)));
       }
       if (index<offset) {
          switch(sizeof(T)) {
