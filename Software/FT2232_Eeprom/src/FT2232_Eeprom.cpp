@@ -10,6 +10,7 @@
 #include <assert.h>
 #include "ftd2xx.h"
 #include "printArray.h"
+#include "LibusbCpp.h"
 
 static constexpr unsigned EEPROM_SIZE = 128;
 

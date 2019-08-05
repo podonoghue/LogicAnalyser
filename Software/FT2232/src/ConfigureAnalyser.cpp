@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "console.h"
+#include "MyException.h"
 
 #include "Lfsr16.h"
 
@@ -144,6 +145,7 @@ public:
 };
 
 void loadLuts() {
+
    uint32_t lutValues[TOTAL_TRIGGER_LUTS] = {0};
 
    TriggerSetup setup = {triggers1, 4};
@@ -152,7 +154,7 @@ void loadLuts() {
 
 //   USBDM::console.write("Trigger Counts LUTs");
 
-   FT_HANDLE ftHandle = openDevice();
+   FT2232 ft2232;
 
    setup.getTriggerPatternMatcherLutValues(lutValues+START_TRIGGER_PATTERN_LUTS);
    setup.getTriggerCombinerLutValues(lutValues+START_TRIGGER_COMBINER_LUTS);
@@ -162,11 +164,11 @@ void loadLuts() {
    uint8_t *convertedData = setup.formatData(TOTAL_TRIGGER_LUTS, lutValues);
 
    for(;;) {
-      transmitData(ftHandle, convertedData, 4*TOTAL_TRIGGER_LUTS);
+      ft2232.transmitData(convertedData, 4*TOTAL_TRIGGER_LUTS);
       puts("Again?");
       getchar();
    }
-   closeDevice(ftHandle);
+
 }
 
 void testLfsr16() {
@@ -181,8 +183,18 @@ void testLfsr16() {
 
 int main() {
 
+   try {
 //   PrintLuts::printLutsForSimulation();
    loadLuts();
+   }
+   catch (std::exception &e) {
+      fprintf(stdout, "Error: %s\n", e.what());
+      fflush(stderr);
+   }
+   catch (std::exception *e) {
+      fprintf(stdout, "Error: %s\n", e->what());
+      fflush(stderr);
+   }
 
    return 0;
 

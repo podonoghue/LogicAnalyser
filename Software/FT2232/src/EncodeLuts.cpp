@@ -94,7 +94,7 @@ void printLuts(uint32_t lutValues[], unsigned number) {
 }
 
 /*
- * This encoder the trigger value for 1 TriggerStep (step)
+ * This encodes the trigger value for 1 TriggerStep (2 comparators)
  * Example layout (MAX_TRIGGER_PATTERNS=2, SAMPLE_WIDTH=32)
  *    33         1 1
  *    10         6 5          0

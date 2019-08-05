@@ -9,128 +9,93 @@
 #include <windows.h>
 #include <assert.h>
 #include "ftd2xx.h"
+
+#include "MyException.h"
 #include "FT2232.h"
 
 /**
- * Print an array as a hex table.
- * The indexes shown are for byte offsets suitable for a memory dump.
- *
- * @param data          Array to print
- * @param size          Size of array in elements
- * @param visibleIndex  The starting index to print for the array. Should be multiple of sizeof(data[]).
+ * Open FT2232 device
  */
-template <typename T>
-void printArray(T *data, uint32_t size, uint32_t visibleIndex=0) {
-   assert((visibleIndex%sizeof(T))==0);
-   unsigned rowMask;
-   unsigned offset;
+FT2232::FT2232() {
 
-   switch(sizeof(T)) {
-      case 1  :
-         offset = (visibleIndex/sizeof(T))&0xF;
-         visibleIndex &= ~0xF;
-         rowMask = 0xF;  break;
-      case 2  :
-         offset = (visibleIndex/sizeof(T))&0x7;
-         visibleIndex &= ~0xF;
-         rowMask = 0x7; break;
-      default :
-         offset = (visibleIndex/sizeof(T))&0x7;
-         visibleIndex &= ~0x1F;
-         rowMask = 0x7; break;
-   }
-   unsigned width = 2*sizeof(T);
-   printf("   ");
-   for (unsigned index=0; index<=(rowMask*sizeof(T)); index+=sizeof(T)) {
-      printf("%*X", width, index);
-      printf(" ");
-   }
-   printf("\n");
-   bool needNewline = true;
-   size += offset;
-   for (unsigned index=0; index<size; index++) {
-      if (needNewline) {
-         printf("%0*X: ", width, visibleIndex+index*sizeof(T));
-      }
-      if (index<offset) {
-         switch(sizeof(T)) {
-            case 1  : printf("   ");       break;
-            case 2  : printf("     ");     break;
-            default : printf("         "); break;
-         }
-      }
-      else {
-         printf("%0*X ", width, data[index-offset]);
-      }
-      needNewline = (((index+1)&rowMask)==0);
-      if (needNewline) {
-         printf("\n");
-      }
-   }
-   printf("\n");
-}
-
-FT_HANDLE openDevice() {
    FT_STATUS ftStatus;
    long unsigned numDevs;
+   handle = nullptr;
 
    // Create the device information list
    ftStatus = FT_CreateDeviceInfoList(&numDevs);
    if (ftStatus == FT_OK) {
-      printf("Number of devices is %ld\n",numDevs);
+      printf("Number of devices is %ld\n", numDevs);
    } else {
       printf("FT_CreateDeviceInfoList failed\n");
-      return nullptr;
+      throw MyException("FT_CreateDeviceInfoList failed");
    }
 
-      FT_DEVICE_LIST_INFO_NODE *devInfo;
+   FT_DEVICE_LIST_INFO_NODE *devInfo;
 
-      if (numDevs > 0) {
-         // allocate storage for list based on numDevs
-         devInfo = (FT_DEVICE_LIST_INFO_NODE*)malloc(sizeof(FT_DEVICE_LIST_INFO_NODE)*numDevs);
-         // get the device information list
-         ftStatus = FT_GetDeviceInfoList(devInfo, &numDevs);
-         if (ftStatus == FT_OK) {
-            for (unsigned i = 0; i < numDevs; i++) {
-               printf("Dev %d:\n",i);
-               printf(" Flags          = 0x%lx\n",    devInfo[i].Flags);
-               printf(" Type           = 0x%lx\n",    devInfo[i].Type);
-               printf(" ID             = 0x%lx\n",    devInfo[i].ID);
-               printf(" LocId          = 0x%lx\n",    devInfo[i].LocId);
-               printf(" SerialNumber   = '%s'\n",     devInfo[i].SerialNumber);
-               printf(" Description    = '%s'\n",     devInfo[i].Description);
-               printf(" ftHandle       = 0x%p\n",     devInfo[i].ftHandle);
-            }
+   if (numDevs > 0) {
+      // allocate storage for list based on numDevs
+      devInfo = (FT_DEVICE_LIST_INFO_NODE*)malloc(sizeof(FT_DEVICE_LIST_INFO_NODE)*numDevs);
+      // get the device information list
+      ftStatus = FT_GetDeviceInfoList(devInfo, &numDevs);
+      if (ftStatus == FT_OK) {
+         for (unsigned i = 0; i < numDevs; i++) {
+            printf("Dev %d:\n",i);
+            printf(" Flags          = 0x%lx\n",    devInfo[i].Flags);
+            printf(" Type           = 0x%lx\n",    devInfo[i].Type);
+            printf(" ID             = 0x%lx\n",    devInfo[i].ID);
+            printf(" LocId          = 0x%lx\n",    devInfo[i].LocId);
+            printf(" SerialNumber   = '%s'\n",     devInfo[i].SerialNumber);
+            printf(" Description    = '%s'\n",     devInfo[i].Description);
+            printf(" handle       = 0x%p\n",       devInfo[i].ftHandle);
          }
       }
+   }
 
-   FT_HANDLE ftHandle;
-
-   ftStatus = FT_OpenEx((char*)"Fast Logic Analyser A",FT_OPEN_BY_DESCRIPTION, &ftHandle);
+   ftStatus = FT_OpenEx((char*)"Fast Logic Analyser A",FT_OPEN_BY_DESCRIPTION, &handle);
    if (ftStatus == FT_OK) {
       printf("FT_OpenEx() OK\n");
    } else {
       printf("FT_OpenEx() failed\n");
-      return nullptr;
+      throw MyException("FT_OpenEx() failed");
    }
 
-   ftStatus = FT_SetTimeouts(ftHandle, 10, 10); // read, write
+   ftStatus = FT_SetTimeouts(handle, 10, 10); // read, write
    if (ftStatus != FT_OK) {
       printf("FT_SetTimeouts() failed\n");
-      return nullptr;
+      throw MyException("FT_SetTimeouts() failed");
    }
-   return ftHandle;
+   return;
 }
 
-void closeDevice(FT_HANDLE ftHandle) {
-   FT_Close(ftHandle);
+/**
+ * Close FT2232 device
+ *
+ * @param handle Device handles
+ */
+FT2232::~FT2232() {
+   try {
+      FT_Close(handle);
+   } catch (std::exception &) {
+      // Ignore
+   }
 }
 
-bool transmitData(FT_HANDLE ftHandle, uint8_t data[], unsigned dataSize) {
+/**
+ * Send data to FPGA through FT2232
+ *
+ * @param handle   Device handle
+ * @param data       Data to send
+ * @param dataSize   Size of data in bytes
+ *
+ * @return true  => OK
+ * @return false => Failed
+ */
+bool FT2232::transmitData(uint8_t data[], unsigned dataSize) {
    FT_STATUS ftStatus;
 
    //   unsigned long rxQueueBytes, txQueueBytes, status;
-   //   ftStatus = FT_GetStatus(ftHandle,&rxQueueBytes, &txQueueBytes, &status);
+   //   ftStatus = FT_GetStatus(handle,&rxQueueBytes, &txQueueBytes, &status);
    //   if (ftStatus != FT_OK) {
    //      printf("FT_GetStatus() failed\n");
    //      return false;
@@ -141,7 +106,7 @@ bool transmitData(FT_HANDLE ftHandle, uint8_t data[], unsigned dataSize) {
    unsigned col = 0;
 
    while(bytesRemaining > 0) {
-      ftStatus = FT_Write(ftHandle, data+offset, bytesRemaining, &bytesWritten);
+      ftStatus = FT_Write(handle, data+offset, bytesRemaining, &bytesWritten);
       if (ftStatus == FT_OK) {
          if (bytesWritten > 0) {
             printf(".");

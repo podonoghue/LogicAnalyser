@@ -10,10 +10,41 @@
 
 #include "ftd2xx.h"
 
-bool transmitData(FT_HANDLE ftHandle, uint8_t data[], unsigned dataSize);
+class FT2232 {
 
-FT_HANDLE openDevice();
+private:
+   FT_HANDLE handle = nullptr;
 
-void closeDevice(FT_HANDLE ftHandle);
+public:
+
+/**
+ * Construct FT2232 device
+ * This open the device
+ *
+ * @return Device handle
+ */
+FT2232();
+
+/**
+ * Send data to FPGA through FT2232
+ *
+ * @param ftHandle   Device handle
+ * @param data       Data to send
+ * @param dataSize   Size of data in bytes
+ *
+ * @return true  => OK
+ * @return false => Failed
+ */
+bool transmitData(uint8_t data[], unsigned dataSize);
+
+/**
+ * Destruct FT2232 device
+ * This closes the device
+ *
+ * @param ftHandle Device handles
+ */
+~FT2232();
+
+};
 
 #endif /* FT2232_H_ */

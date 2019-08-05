@@ -181,7 +181,6 @@ static constexpr int LUTS_PER_TRIGGER_STEP_FOR_PATTERNS = (MAX_TRIGGER_PATTERNS*
 /// Number of LUTS per trigger step used for trigger pattern combiners
 static constexpr int LUTS_PER_TRIGGER_STEP_FOR_COMBINERS = 1;
 
-// todo fix this
 /// Each configuration word occupies a LUT
 static constexpr int LUTS_FOR_CONFIG = 0;//NUM_CONFIG_WORDS/1;
 
@@ -218,7 +217,7 @@ static constexpr int START_TRIGGER_COMBINER_LUTS   = START_TRIGGER_PATTERN_LUTS+
 // Start of Trigger Flag LUTs
 static constexpr int START_TRIGGER_COUNT_LUTS      = START_TRIGGER_COMBINER_LUTS+LUTS_FOR_TRIGGER_COMBINERS;
 
-// Start of Trigger Count Satcher LUTs
+// Start of Trigger Count Matcher LUTs
 static constexpr int START_TRIGGER_FLAG_LUTS       = START_TRIGGER_COUNT_LUTS+LUTS_FOR_TRIGGER_COUNTS;
 
 ///=========================================================================
