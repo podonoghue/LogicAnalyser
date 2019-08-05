@@ -56,6 +56,7 @@ static const UsbId usbIds[] = {
       {0x0925, 0x3881}, // Saleae Logic Analyser
       {0x04B4, 0x8613}, // Cypress evaluation board
       {0x2A0E, 0x0021}, // DSLogic
+      {0x08A9, 0x0014}, // Broken 24MHz LA
       {0,0}
 };
 
@@ -550,7 +551,7 @@ void downloadEepromBlockToTarget(libusb_device_handle *usbDeviceHandle, uint16_t
    }
 }
 /**
- * Upload EEPROM from target
+ * Download EEPROM to target
  *
  * @param usbDeviceHandle
  * @param eeprom_image
@@ -586,6 +587,11 @@ void downloadEepromToTarget(libusb_device_handle *usbDeviceHandle, HexImage &eep
    printf("\n");
 }
 
+/**
+ * Download the EEPROM Utility program to the target RAM
+ *
+ * @param handle
+ */
 void downloadEepromUtility(libusb_device_handle *handle) {
 
    HexImage firmware_image(MAX_RAM_IMAGE_SIZE);
@@ -620,6 +626,12 @@ struct EepromTypes {
       EepromSize  eepromAccessType;
 };
 
+/**
+ * Read EEPROM from target and save to file
+ *
+ * @param eepromType Type of EEPROM
+ * @param filename   Name of file to write EEPROM image to
+ */
 void readEeprom(EepromTypes eepromType, const char *filename) {
 
    try {
@@ -649,6 +661,13 @@ void readEeprom(EepromTypes eepromType, const char *filename) {
    }
 }
 
+/**
+ * Write file to target EEPROM
+ *
+ * @param eepromType
+ * @param new_load_filename
+ * @param randomDid
+ */
 void writeEeprom(EepromTypes eepromType, const char * new_load_filename) {
 
    static constexpr const char *old_save_filename = "saved_eeprom_image.hex";
@@ -709,6 +728,12 @@ void writeEeprom(EepromTypes eepromType, const char * new_load_filename) {
    }
 }
 
+/**
+ * Verify target EEPROM against file
+ *
+ * @param eepromType
+ * @param new_load_filename
+ */
 void verifyEeprom(EepromTypes eepromType, const char *new_load_filename) {
 
    try {
@@ -761,6 +786,13 @@ EepromTypes eepromTypes[] = {
       {"M24128",    16384,  EepromSize_Large }, // 4
 };
 
+/**
+ * Get EEPROM information based on type name
+ *
+ * @param name
+ *
+ * @return
+ */
 EepromTypes *getEepromType(const char *name) {
    for (unsigned index=0; index<(sizeof(eepromTypes)/sizeof(eepromTypes[0])); index++) {
       if (strcasecmp(eepromTypes[index].name, name) == 0) {
@@ -770,6 +802,9 @@ EepromTypes *getEepromType(const char *name) {
    return nullptr;
 }
 
+/**
+ * Quick hack to convert a fixed file from binary image to Intel HEX file
+ */
 void binaryToHexFile() {
 
    HexImage image(16384, 0x00);
@@ -793,7 +828,7 @@ void usage() {
    );
 }
 
-enum Action {Action_None, Action_Program, Action_Verify, Action_Read, };
+enum Action {Action_None, Action_Program, Action_Verify, Action_Read, Action_Saleae, };
 
 int main(int argc, const char *argv[]) {
    Action      action      = Action_None;
@@ -801,7 +836,7 @@ int main(int argc, const char *argv[]) {
    const char *filename    = nullptr;
 
    try {
-      if ((argc < 5) || (((argc-1) % 2) != 0)) {
+      if ((argc != 5) && (argc != 2)) {
          usage();
          throw MyException("Wrong number of arguments");
       }
@@ -809,25 +844,44 @@ int main(int argc, const char *argv[]) {
          if (strcmp(argv[index], "-t") == 0) {
             // EEPROM type
             index++;
+            if (eepromType != nullptr) {
+               throw MyException("Conflicting options");
+            }
             eepromType = argv[index++];
          }
          else if (strcmp(argv[index], "-p") == 0) {
             // Program
             index++;
+            if (filename != nullptr) {
+               throw MyException("Multiple filenames");
+            }
             filename = argv[index++];
             action   = Action_Program;
          }
          else if (strcmp(argv[index], "-v") == 0) {
             // Verify
             index++;
+            if (filename != nullptr) {
+               throw MyException("Multiple filenames");
+            }
             filename = argv[index++];
             action   = Action_Verify;
          }
          else if (strcmp(argv[index], "-r") == 0) {
             // Read
             index++;
+            if (filename != nullptr) {
+               throw MyException("Multiple filenames");
+            }
             filename = argv[index++];
             action   = Action_Read;
+         }
+         else if (strcmp(argv[index], "-s") == 0) {
+            // Read
+            index++;
+            eepromType  = "24LC02";
+            filename    = "eeprom_image_saleae.hex";
+            action      = Action_Saleae;
          }
          else {
             usage();
@@ -846,6 +900,8 @@ int main(int argc, const char *argv[]) {
       printf("EEPROM is %s (%d bytes)\n", type->name, type->size);
 
       switch(action) {
+         case Action_Saleae:
+            // no break
          case Action_Program:
             printf("EEPROM action is Program\n");
             writeEeprom(*type, filename);

@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <assert.h>
 #include "ftd2xx.h"
+#include "FT2232.h"
 
 /**
  * Print an array as a hex table.
@@ -125,39 +126,39 @@ void closeDevice(FT_HANDLE ftHandle) {
    FT_Close(ftHandle);
 }
 
-int main(int argc, const char *argv[]) {
-
+bool transmitData(FT_HANDLE ftHandle, uint8_t data[], unsigned dataSize) {
    FT_STATUS ftStatus;
 
-   uint8_t txBuffer[] = {0xAA, 0x55, 1,2,3,4,5,6,7,8,9, 0xAA, 0x55, };
-   unsigned long bytesWritten;
+   //   unsigned long rxQueueBytes, txQueueBytes, status;
+   //   ftStatus = FT_GetStatus(ftHandle,&rxQueueBytes, &txQueueBytes, &status);
+   //   if (ftStatus != FT_OK) {
+   //      printf("FT_GetStatus() failed\n");
+   //      return false;
+   //   }
+   unsigned bytesRemaining    = dataSize;
+   unsigned long bytesWritten = 0;
+   unsigned long offset       = 0;
+   unsigned col = 0;
 
-   FT_HANDLE ftHandle = openDevice();
-
-   unsigned col=0;
-   for(unsigned i=0; i<100000; i++) {
-      unsigned long rxQueueBytes, txQueueBytes, status;
-      ftStatus = FT_GetStatus(ftHandle,&rxQueueBytes, &txQueueBytes, &status);
-      if (ftStatus != FT_OK) {
-         printf("FT_GetStatus() failed\n");
-         return EXIT_FAILURE;
-      }
-      ftStatus = FT_Write(ftHandle, txBuffer, sizeof(txBuffer), &bytesWritten);
+   while(bytesRemaining > 0) {
+      ftStatus = FT_Write(ftHandle, data+offset, bytesRemaining, &bytesWritten);
       if (ftStatus == FT_OK) {
          if (bytesWritten > 0) {
-//            printf(".");
+            printf(".");
             if (col++==60) {
                col = 0;
-//               printf("\n");
+               printf("\n");
             }
-            //            printf("\nbytesWritten = %ld\n", bytesWritten);
+            printf("\nbytesWritten = %ld\n", bytesWritten);
+            offset         += bytesWritten;
+            bytesRemaining -= bytesWritten;
          }
-//         fflush(stdout);
+         fflush(stdout);
          //         printf("FT_Write() OK\n");
       } else {
          fprintf(stderr, "\nFT_Write() failed\n");
-         return EXIT_FAILURE;
+         return false;
       }
    }
-
+   return true;
 }

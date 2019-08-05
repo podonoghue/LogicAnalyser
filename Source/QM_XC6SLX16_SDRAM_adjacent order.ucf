@@ -56,73 +56,82 @@ NET "sdram_addr[12]"    LOC = K1    | IOSTANDARD = LVTTL;  // sdram_addr[12]
 
 # Pins in adjacent pin order
 
-# Bank 0                                   
-# ==========                               
+# Banks 0 & 2
+# ============
 
 # +--------------------------------------------------------------+
 # | 63 | 61 | 59 |                           | 7  |  5 |  3 |  1 | U8
 # | 5V | Gnd| I/O ........................... I/O | Gnd| 3V3| Gnd|
 # +--------------------------------------------------------------+
 # | 5V | Gnd| I/O ........................... I/O | Gnd| 3V3| Gnd|
-# | 64 | 62 | 60 |                           | 8  |  6 |  4 |  2 | 
+# | 64 | 62 | 60 |                           | 8  |  6 |  4 |  2 |
 # +--------------------------------------------------------------+
 #
+                                                      // GND   U8-P1
+                                                      // 3V3!! U8-P3
+                                                      // GND   U8-P5
+# NET "ft2232h_rst_n" LOC = A14 | IOSTANDARD = LVTTL; // BANK0 U8-P7
+# NET "" LOC = C13 | IOSTANDARD = LVTTL; // BANK0 U8-P9
+# NET "" LOC = B12 | IOSTANDARD = LVTTL; // BANK0 U8-P11
+NET "ft2232h_rxf_n"  LOC = C11 | IOSTANDARD = LVTTL; // BANK0 U8-P13
+NET "ft2232h_txe_n"  LOC = B10 | IOSTANDARD = LVTTL; // BANK0 U8-P15
+NET "ft2232h_rd_n"   LOC = C9  | IOSTANDARD = LVTTL; // BANK0 U8-P17
+NET "ft2232h_wr_n"   LOC = B8  | IOSTANDARD = LVTTL; // BANK0 U8-P19
+NET "ft2232h_siwu_n" LOC = C7  | IOSTANDARD = LVTTL; // BANK0 U8-P21
+# NET "" LOC = B6  | IOSTANDARD = LVTTL; // BANK0 U8-P23
+# NET "" LOC = B5  | IOSTANDARD = LVTTL; // BANK0 U8-P25
+# NET "" LOC = E10 | IOSTANDARD = LVTTL; // BANK0 U8-P27
+# NET "" LOC = E11 | IOSTANDARD = LVTTL; // BANK0 U8-P29
+# NET "" LOC = F9  | IOSTANDARD = LVTTL; // BANK0 U8-P31
+# NET "" LOC = C8  | IOSTANDARD = LVTTL; // BANK0 U8-P33
+# NET "" LOC = E7  | IOSTANDARD = LVTTL; // BANK0 U8-P35
+# NET "" LOC = F7  | IOSTANDARD = LVTTL; // BANK0 U8-P37
+# NET "" LOC = D6  | IOSTANDARD = LVTTL; // BANK0 U8-P39
+# NET "" LOC = P4  | IOSTANDARD = LVTTL; // BANK2 U8-P41
+# NET "" LOC = P5  | IOSTANDARD = LVTTL; // BANK2 U8-P43
+NET "ft2232h_data(0)" LOC = M7  | IOSTANDARD = LVTTL; // BANK2 U8-P45
+NET "ft2232h_data(1)" LOC = N8  | IOSTANDARD = LVTTL; // BANK2 U8-P47
+NET "ft2232h_data(2)" LOC = P9  | IOSTANDARD = LVTTL; // BANK2 U8-P49
+NET "ft2232h_data(3)" LOC = T5  | IOSTANDARD = LVTTL; // BANK2 U8-P51
+NET "ft2232h_data(4)" LOC = T6  | IOSTANDARD = LVTTL; // BANK2 U8-P53
+NET "ft2232h_data(5)" LOC = N9  | IOSTANDARD = LVTTL; // BANK2 U8-P55
+NET "ft2232h_data(6)" LOC = M10 | IOSTANDARD = LVTTL; // BANK2 U8-P57
+NET "ft2232h_data(7)" LOC = P12 | IOSTANDARD = LVTTL; // BANK2 U8-P59
+                                                      // GND   U8-P61
+                                                      // 5V!!  U8-P63
 
-NET "ft2232h_data(0)" LOC = A14 | IOSTANDARD = LVTTL; // U8 P7
-NET "ft2232h_data(1)" LOC = C13 | IOSTANDARD = LVTTL; // U8 P9
-NET "ft2232h_data(2)" LOC = B12 | IOSTANDARD = LVTTL; // U8 P11
-NET "ft2232h_data(3)" LOC = C11 | IOSTANDARD = LVTTL; // U8 P13
-NET "ft2232h_data(4)" LOC = B10 | IOSTANDARD = LVTTL; // U8 P15
-NET "ft2232h_data(5)" LOC = C9  | IOSTANDARD = LVTTL; // U8 P17
-NET "ft2232h_data(6)" LOC = B8  | IOSTANDARD = LVTTL; // U8 P19
-NET "ft2232h_data(7)" LOC = C7  | IOSTANDARD = LVTTL; // U8 P21
-# NET "" LOC = B6  | IOSTANDARD = LVTTL; // U8 P23
-# NET "" LOC = B5  | IOSTANDARD = LVTTL; // U8 P25
-# NET "" LOC = E10 | IOSTANDARD = LVTTL; // U8 P27
-# NET "" LOC = E11 | IOSTANDARD = LVTTL; // U8 P29
-# NET "" LOC = F9  | IOSTANDARD = LVTTL; // U8 P31
-# NET "" LOC = C8  | IOSTANDARD = LVTTL; // U8 P33
-# NET "" LOC = E7  | IOSTANDARD = LVTTL; // U8 P35
-# NET "" LOC = F7  | IOSTANDARD = LVTTL; // U8 P37
-# NET "" LOC = D6  | IOSTANDARD = LVTTL; // U8 P39
-# NET "" LOC = P4  | IOSTANDARD = LVTTL; // U8 P41
-# NET "" LOC = P5  | IOSTANDARD = LVTTL; // U8 P43
-# NET "" LOC = M7  | IOSTANDARD = LVTTL; // U8 P45
-# NET "" LOC = N8  | IOSTANDARD = LVTTL; // U8 P47
-# NET "" LOC = P9  | IOSTANDARD = LVTTL; // U8 P49
-NET "ft2232h_rxf_n"  LOC = T5  | IOSTANDARD = LVTTL; // U8 P51
-NET "ft2232h_txe_n"  LOC = T6  | IOSTANDARD = LVTTL; // U8 P53
-NET "ft2232h_rd_n"   LOC = N9  | IOSTANDARD = LVTTL; // U8 P55
-NET "ft2232h_wr_n"   LOC = M10 | IOSTANDARD = LVTTL; // U8 P57
-NET "ft2232h_siwu_n" LOC = P12 | IOSTANDARD = LVTTL; // U8 P59
-
-# NET "" LOC = B14 | IOSTANDARD = LVTTL; // U8 P8
-# NET "" LOC = A13 | IOSTANDARD = LVTTL; // U8 P10
-# NET "" LOC = A12 | IOSTANDARD = LVTTL; // U8 P12
-# NET "" LOC = A11 | IOSTANDARD = LVTTL; // U8 P14
-# NET "" LOC = A9  | IOSTANDARD = LVTTL; // U8 P16
-# NET "" LOC = A8  | IOSTANDARD = LVTTL; // U8 P18
-# NET "" LOC = A7  | IOSTANDARD = LVTTL; // U8 P20
-# NET "" LOC = A6  | IOSTANDARD = LVTTL; // U8 P22
-# NET "" LOC = A5  | IOSTANDARD = LVTTL; // U8 P24
-# NET "" LOC = A4  | IOSTANDARD = LVTTL; // U8 P26
-# NET "" LOC = C10 | IOSTANDARD = LVTTL; // U8 P28
-# NET "" LOC = F10 | IOSTANDARD = LVTTL; // U8 P30
-# NET "" LOC = D9  | IOSTANDARD = LVTTL; // U8 P32
-# NET "" LOC = D8  | IOSTANDARD = LVTTL; // U8 P34
-# NET "" LOC = E6  | IOSTANDARD = LVTTL; // U8 P36
-# NET "" LOC = C6  | IOSTANDARD = LVTTL; // U8 P38
-# NET "" LOC = M6  | IOSTANDARD = LVTTL; // U8 P40
-# NET "" LOC = N5  | IOSTANDARD = LVTTL; // U8 P42
-# NET "" LOC = N6  | IOSTANDARD = LVTTL; // U8 P44
-# NET "" LOC = P6  | IOSTANDARD = LVTTL; // U8 P46
-# NET "" LOC = L7  | IOSTANDARD = LVTTL; // U8 P48
-# NET "" LOC = T4  | IOSTANDARD = LVTTL; // U8 P50
-# NET "" LOC = R5  | IOSTANDARD = LVTTL; // U8 P52
-# NET "" LOC = T7  | IOSTANDARD = LVTTL; // U8 P54
-# NET "" LOC = M9  | IOSTANDARD = LVTTL; // U8 P56
-# NET "" LOC = P11 | IOSTANDARD = LVTTL; // U8 P58
-# NET "" LOC = M11 | IOSTANDARD = LVTTL; // U8 P60
+                                         // GND   U8-P2
+                                         // 3V3!! U8-P4
+                                         // GND   U8-P6
+# NET "" LOC = B14 | IOSTANDARD = LVTTL; // BANK0 U8-P8
+# NET "" LOC = A13 | IOSTANDARD = LVTTL; // BANK0 U8-P10
+# NET "" LOC = A12 | IOSTANDARD = LVTTL; // BANK0 U8-P12
+# NET "" LOC = A11 | IOSTANDARD = LVTTL; // BANK0 U8-P14
+# NET "" LOC = A9  | IOSTANDARD = LVTTL; // BANK0 U8-P16
+# NET "" LOC = A8  | IOSTANDARD = LVTTL; // BANK0 U8-P18
+# NET "" LOC = A7  | IOSTANDARD = LVTTL; // BANK0 U8-P20
+# NET "" LOC = A6  | IOSTANDARD = LVTTL; // BANK0 U8-P22
+# NET "" LOC = A5  | IOSTANDARD = LVTTL; // BANK0 U8-P24
+# NET "" LOC = A4  | IOSTANDARD = LVTTL; // BANK0 U8-P26
+# NET "" LOC = C10 | IOSTANDARD = LVTTL; // BANK0 U8-P28
+# NET "" LOC = F10 | IOSTANDARD = LVTTL; // BANK0 U8-P30
+# NET "" LOC = D9  | IOSTANDARD = LVTTL; // BANK0 U8-P32
+# NET "" LOC = D8  | IOSTANDARD = LVTTL; // BANK0 U8-P34
+# NET "" LOC = E6  | IOSTANDARD = LVTTL; // BANK0 U8-P36
+# NET "" LOC = C6  | IOSTANDARD = LVTTL; // BANK0 U8-P38
+# NET "" LOC = M6  | IOSTANDARD = LVTTL; // BANK2 U8-P40
+# NET "" LOC = N5  | IOSTANDARD = LVTTL; // BANK2 U8-P42
+# NET "" LOC = N6  | IOSTANDARD = LVTTL; // BANK2 U8-P44
+# NET "" LOC = P6  | IOSTANDARD = LVTTL; // BANK2 U8-P46
+# NET "" LOC = L7  | IOSTANDARD = LVTTL; // BANK2 U8-P48
+# NET "" LOC = T4  | IOSTANDARD = LVTTL; // BANK2 U8-P50
+# NET "" LOC = R5  | IOSTANDARD = LVTTL; // BANK2 U8-P52
+# NET "" LOC = T7  | IOSTANDARD = LVTTL; // BANK2 U8-P54
+# NET "" LOC = M9  | IOSTANDARD = LVTTL; // BANK2 U8-P56
+# NET "" LOC = P11 | IOSTANDARD = LVTTL; // BANK2 U8-P58
+# NET "" LOC = M11 | IOSTANDARD = LVTTL; // BANK2 U8-P60
+                                         // GND   U8-P62
+                                         // 5V!!  U8-P64
 
 # Bank 1
 # ==========
@@ -132,63 +141,72 @@ NET "ft2232h_siwu_n" LOC = P12 | IOSTANDARD = LVTTL; // U8 P59
 # | 5V | Gnd| I/O ........................... I/O | Gnd| 3V3| Gnd|
 # +--------------------------------------------------------------+
 # | 5V | Gnd| I/O ........................... I/O | Gnd| 3V3| Gnd|
-# | 64 | 62 | 60 |                           | 8  |  6 |  4 |  2 | 
+# | 64 | 62 | 60 |                           | 8  |  6 |  4 |  2 |
 # +--------------------------------------------------------------+
 #
 
-# NET "" LOC = E12 | IOSTANDARD = LVTTL; // U7 P7
-# NET "" LOC = B15 | IOSTANDARD = LVTTL; // U7 P9
-# NET "" LOC = C15 | IOSTANDARD = LVTTL; // U7 P11
-# NET "" LOC = D14 | IOSTANDARD = LVTTL; // U7 P13
-# NET "" LOC = E15 | IOSTANDARD = LVTTL; // U7 P15
-# NET "" LOC = F15 | IOSTANDARD = LVTTL; // U7 P17
-# NET "" LOC = G11 | IOSTANDARD = LVTTL; // U7 P19
-# NET "" LOC = F14 | IOSTANDARD = LVTTL; // U7 P21
-# NET "" LOC = G16 | IOSTANDARD = LVTTL; // U7 P23
-# NET "" LOC = H15 | IOSTANDARD = LVTTL; // U7 P25
-# NET "" LOC = G12 | IOSTANDARD = LVTTL; // U7 P27
-# NET "" LOC = H13 | IOSTANDARD = LVTTL; // U7 P29
-# NET "" LOC = J14 | IOSTANDARD = LVTTL; // U7 P31
-# NET "" LOC = J11 | IOSTANDARD = LVTTL; // U7 P33
-# NET "" LOC = K14 | IOSTANDARD = LVTTL; // U7 P35
-# NET "" LOC = K15 | IOSTANDARD = LVTTL; // U7 P37
+                                         // GND   U8-P1
+                                         // 3V3!! U8-P3
+                                         // GND   U8-P5
+# NET "" LOC = E12 | IOSTANDARD = LVTTL; // BANK1 U7-P7
+# NET "" LOC = B15 | IOSTANDARD = LVTTL; // BANK1 U7-P9
+# NET "" LOC = C15 | IOSTANDARD = LVTTL; // BANK1 U7-P11
+# NET "" LOC = D14 | IOSTANDARD = LVTTL; // BANK1 U7-P13
+# NET "" LOC = E15 | IOSTANDARD = LVTTL; // BANK1 U7-P15
+# NET "" LOC = F15 | IOSTANDARD = LVTTL; // BANK1 U7-P17
+# NET "" LOC = G11 | IOSTANDARD = LVTTL; // BANK1 U7-P19
+# NET "" LOC = F14 | IOSTANDARD = LVTTL; // BANK1 U7-P21
+# NET "" LOC = G16 | IOSTANDARD = LVTTL; // BANK1 U7-P23
+# NET "" LOC = H15 | IOSTANDARD = LVTTL; // BANK1 U7-P25
+# NET "" LOC = G12 | IOSTANDARD = LVTTL; // BANK1 U7-P27
+# NET "" LOC = H13 | IOSTANDARD = LVTTL; // BANK1 U7-P29
+# NET "" LOC = J14 | IOSTANDARD = LVTTL; // BANK1 U7-P31
+# NET "" LOC = J11 | IOSTANDARD = LVTTL; // BANK1 U7-P33
+# NET "" LOC = K14 | IOSTANDARD = LVTTL; // BANK1 U7-P35
+# NET "" LOC = K15 | IOSTANDARD = LVTTL; // BANK1 U7-P37
+# NET "" LOC = L16 | IOSTANDARD = LVTTL; // BANK1 U7-P39
+# NET "" LOC = K11 | IOSTANDARD = LVTTL; // BANK1 U7-P41
+# NET "" LOC = M15 | IOSTANDARD = LVTTL; // BANK1 U7-P43
+# NET "" LOC = N14 | IOSTANDARD = LVTTL; // BANK1 U7-P45
+# NET "" LOC = M13 | IOSTANDARD = LVTTL; // BANK1 U7-P47
+# NET "" LOC = L12 | IOSTANDARD = LVTTL; // BANK1 U7-P49
+# NET "" LOC = P15 | IOSTANDARD = LVTTL; // BANK1 U7-P51
+# NET "" LOC = R15 | IOSTANDARD = LVTTL; // BANK1 U7-P53
+# NET "" LOC = R14 | IOSTANDARD = LVTTL; // BANK1 U7-P55
+# NET "" LOC = T13 | IOSTANDARD = LVTTL; // BANK1 U7-P57
+# NET "" LOC = T12 | IOSTANDARD = LVTTL; // BANK1 U7-P59
+                                         // GND   U8-P61
+                                         // 5V!!  U8-P63
 
-# NET "" LOC = L16 | IOSTANDARD = LVTTL; // U7 P39
-# NET "" LOC = K11 | IOSTANDARD = LVTTL; // U7 P41
-# NET "" LOC = M15 | IOSTANDARD = LVTTL; // U7 P43
-# NET "" LOC = N14 | IOSTANDARD = LVTTL; // U7 P45
-# NET "" LOC = M13 | IOSTANDARD = LVTTL; // U7 P47
-# NET "" LOC = L12 | IOSTANDARD = LVTTL; // U7 P49
-# NET "" LOC = P15 | IOSTANDARD = LVTTL; // U7 P51
-# NET "" LOC = R15 | IOSTANDARD = LVTTL; // U7 P53
-# NET "" LOC = R14 | IOSTANDARD = LVTTL; // U7 P55
-# NET "" LOC = T13 | IOSTANDARD = LVTTL; // U7 P57
-# NET "" LOC = T12 | IOSTANDARD = LVTTL; // U7 P59
-
-NET "sample(0)"  LOC = E13 | IOSTANDARD = LVTTL; // U7 P8
-NET "sample(1)"  LOC = B16 | IOSTANDARD = LVTTL; // U7 P10
-NET "sample(2)"  LOC = C16 | IOSTANDARD = LVTTL; // U7 P12
-NET "sample(3)"  LOC = D16 | IOSTANDARD = LVTTL; // U7 P14
-NET "sample(4)"  LOC = E16 | IOSTANDARD = LVTTL; // U7 P16
-NET "sample(5)"  LOC = F16 | IOSTANDARD = LVTTL; // U7 P18
-NET "sample(6)"  LOC = F12 | IOSTANDARD = LVTTL; // U7 P20
-NET "sample(7)"  LOC = F13 | IOSTANDARD = LVTTL; // U7 P22
-NET "sample(8)"  LOC = G14 | IOSTANDARD = LVTTL; // U7 P24
-NET "sample(9)"  LOC = H16 | IOSTANDARD = LVTTL; // U7 P26
-NET "sample(10)" LOC = H11 | IOSTANDARD = LVTTL; // U7 P28
-NET "sample(11)" LOC = H14 | IOSTANDARD = LVTTL; // U7 P30
-NET "sample(12)" LOC = J16 | IOSTANDARD = LVTTL; // U7 P32
-NET "sample(13)" LOC = J12 | IOSTANDARD = LVTTL; // U7 P34
-NET "sample(14)" LOC = J13 | IOSTANDARD = LVTTL; // U7 P36
-NET "sample(15)" LOC = K16 | IOSTANDARD = LVTTL; // U7 P38
-# NET "" LOC = L14 | IOSTANDARD = LVTTL; // U7 P40
-# NET "" LOC = K12 | IOSTANDARD = LVTTL; // U7 P42
-# NET "" LOC = M16 | IOSTANDARD = LVTTL; // U7 P44
-# NET "" LOC = N16 | IOSTANDARD = LVTTL; // U7 P46
-# NET "" LOC = M14 | IOSTANDARD = LVTTL; // U7 P48
-# NET "" LOC = L13 | IOSTANDARD = LVTTL; // U7 P50
-# NET "" LOC = P16 | IOSTANDARD = LVTTL; // U7 P52
-# NET "" LOC = R16 | IOSTANDARD = LVTTL; // U7 P54
-# NET "" LOC = T15 | IOSTANDARD = LVTTL; // U7 P56
-# NET "" LOC = T14 | IOSTANDARD = LVTTL; // U7 P58
-NET "initializing" LOC = R12 | IOSTANDARD = LVTTL; // U7 P60
+                                                 // GND   U7-P2
+                                                 // 3V3!! U7-P4
+                                                 // GND   U7-P6
+NET "sample(0)"  LOC = E13 | IOSTANDARD = LVTTL; // BANK1 U7-P8
+NET "sample(1)"  LOC = B16 | IOSTANDARD = LVTTL; // BANK1 U7-P10
+NET "sample(2)"  LOC = C16 | IOSTANDARD = LVTTL; // BANK1 U7-P12
+NET "sample(3)"  LOC = D16 | IOSTANDARD = LVTTL; // BANK1 U7-P14
+NET "sample(4)"  LOC = E16 | IOSTANDARD = LVTTL; // BANK1 U7-P16
+NET "sample(5)"  LOC = F16 | IOSTANDARD = LVTTL; // BANK1 U7-P18
+NET "sample(6)"  LOC = F12 | IOSTANDARD = LVTTL; // BANK1 U7-P20
+NET "sample(7)"  LOC = F13 | IOSTANDARD = LVTTL; // BANK1 U7-P22
+NET "sample(8)"  LOC = G14 | IOSTANDARD = LVTTL; // BANK1 U7-P24
+NET "sample(9)"  LOC = H16 | IOSTANDARD = LVTTL; // BANK1 U7-P26
+NET "sample(10)" LOC = H11 | IOSTANDARD = LVTTL; // BANK1 U7-P28
+NET "sample(11)" LOC = H14 | IOSTANDARD = LVTTL; // BANK1 U7-P30
+NET "sample(12)" LOC = J16 | IOSTANDARD = LVTTL; // BANK1 U7-P32
+NET "sample(13)" LOC = J12 | IOSTANDARD = LVTTL; // BANK1 U7-P34
+NET "sample(14)" LOC = J13 | IOSTANDARD = LVTTL; // BANK1 U7-P36
+NET "sample(15)" LOC = K16 | IOSTANDARD = LVTTL; // BANK1 U7-P38
+# NET "" LOC = L14 | IOSTANDARD = LVTTL; // BANK1 U7-P40
+# NET "" LOC = K12 | IOSTANDARD = LVTTL; // BANK1 U7-P42
+# NET "" LOC = M16 | IOSTANDARD = LVTTL; // BANK1 U7-P44
+# NET "" LOC = N16 | IOSTANDARD = LVTTL; // BANK1 U7-P46
+# NET "" LOC = M14 | IOSTANDARD = LVTTL; // BANK1 U7-P48
+# NET "" LOC = L13 | IOSTANDARD = LVTTL; // BANK1 U7-P50
+# NET "" LOC = P16 | IOSTANDARD = LVTTL; // BANK1 U7-P52
+# NET "" LOC = R16 | IOSTANDARD = LVTTL; // BANK1 U7-P54
+# NET "" LOC = T15 | IOSTANDARD = LVTTL; // BANK1 U7-P56
+# NET "" LOC = T14 | IOSTANDARD = LVTTL; // BANK1 U7-P58
+NET "initializing" LOC = R12 | IOSTANDARD = LVTTL; // BANK1 U7-P60
+                                                   // GND   U7-P62
+                                                   // 5V!!  U7-P64

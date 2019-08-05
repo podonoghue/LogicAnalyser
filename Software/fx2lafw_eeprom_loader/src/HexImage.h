@@ -201,7 +201,7 @@ public:
       printArray(image, getSize());
    }
 
-   uint8_t const &operator[](unsigned index) {
+   uint8_t &operator[](unsigned index) {
       if (index >= getSize()) {
          throw MyException("Array index out of range");
       }
