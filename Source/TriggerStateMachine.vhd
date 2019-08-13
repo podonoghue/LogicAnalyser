@@ -7,19 +7,19 @@ use work.all;
 use work.LogicAnalyserPackage.all;
 
 entity TriggerStateMachine is
-    port ( clock                 : in   std_logic;
-           reset                 : in   std_logic;
-           enable                : in   std_logic;
-           
-           doSample              : in   std_logic;
-           triggerCountMatch     : in   std_logic;
-           triggerPatternMatch   : in   std_logic;
-           lastTriggerStep       : in   std_logic;
-           contiguousTrigger     : in   std_logic;
+    port ( 
+      clock                 : in   std_logic;
+      enable                : in   std_logic;
 
-           matchCount            : out  MatchCounterType;
-           triggerStep           : out  TriggerRangeType;
-           triggerFound          : out  std_logic
+      doSample              : in   std_logic;
+      triggerCountMatch     : in   std_logic;
+      triggerPatternMatch   : in   std_logic;
+      lastTriggerStep       : in   std_logic;
+      contiguousTrigger     : in   std_logic;
+
+      matchCount            : out  MatchCounterType;
+      triggerStep           : out  TriggerRangeType;
+      triggerFound          : out  std_logic
      );
 end TriggerStateMachine;
 
@@ -54,7 +54,7 @@ begin
    
    begin      
       if rising_edge(clock) then
-         if ((reset = '1') or (enable = '0')) then
+         if (enable = '0') then
             stepCounter  <= (others =>'0');
             matchCounter <= (0=>'1', others =>'0'); 
             triggerFound <= '0';

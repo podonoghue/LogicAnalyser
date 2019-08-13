@@ -2,13 +2,17 @@
 NET "clock_50MHz" TNM_NET = clock_50MHz;
 TIMESPEC TS_clock_50MHz = PERIOD "clock_50MHz" 50 MHz HIGH 50%;
 
+// Crossings between these clock domains are double-clocked
+TIMESPEC TS_IGNORE1 = FROM "Digitalclockmanager_inst_clkfx" TO "Digitalclockmanager_inst_clk2x" TIG;
+TIMESPEC TS_IGNORE2 = FROM "Digitalclockmanager_inst_clk2x" TO "Digitalclockmanager_inst_clkfx" TIG;
+
 NET "clock_50MHz"       LOC = A10   | IOSTANDARD = LVTTL;  // SYS_CLK
 
 NET "armed"             LOC = T9    | IOSTANDARD = LVTTL;  // LED #1 (BANK2_IO_T9)
 NET "heartbeat"         LOC = R9    | IOSTANDARD = LVTTL;  // LED #3 (BANK2_IO_R9)
 
 #NET "sw_1"              LOC = T8    | IOSTANDARD = LVTTL;  // SW #2 (BANK2_IO_T8)
-NET "reset_n"           LOC = R7    | IOSTANDARD = LVTTL;  // SW #3 (BANK2_IO_R7)
+#NET "sw_3"              LOC = R7    | IOSTANDARD = LVTTL;  // SW #3 (BANK2_IO_R7)
 
 NET "sdram_clk"         LOC = H1    | IOSTANDARD = LVTTL;  // 100MHz sdram_clk Clock
 NET "sdram_cke"         LOC = J1    | IOSTANDARD = LVTTL;  // sdram_cke

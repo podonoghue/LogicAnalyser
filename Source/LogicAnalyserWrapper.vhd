@@ -10,9 +10,8 @@ use work.LogicAnalyserPackage.all;
 
 entity LogicAnalyserWrapper is
    port ( 
-      reset_n        : in    std_logic;
-      clock_50MHz    : in    std_logic;
-
+      clock_50MHz    : in std_logic;
+      
       -- Bus interface
       ft2232h_rxf_n  : in    std_logic;      -- Rx FIFO Full
       ft2232h_rd_n   : out   std_logic;      -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
@@ -44,26 +43,22 @@ end entity;
  
 architecture Behavior of LogicAnalyserWrapper is 
  
-signal reset              : std_logic;
+signal clock_110MHz       : std_logic;
+signal clock_110MHz_n     : std_logic;
 signal clock_100MHz       : std_logic;
-signal clock_100MHz_n     : std_logic;
-signal clock_200MHz       : std_logic;
 
 signal heartbeatFFs       : unsigned(24 downto 0);
 
 begin
-   reset <= not reset_n when rising_edge(clock_100MHz);
-   
-   heartbeat    <= heartbeatFFs(heartbeatFFs'left) and not reset;
+   heartbeat    <= heartbeatFFs(heartbeatFFs'left);
    heartbeatFFs <= (heartbeatFFs + 1) when rising_edge(clock_100MHz);
 
    LogicAnalyser_inst :
    entity work.LogicAnalyser
    port map ( 
-      reset          => reset, 
+      clock_110MHz   => clock_110MHz, 
+      clock_110MHz_n => clock_110MHz_n, 
       clock_100MHz   => clock_100MHz, 
-      clock_100MHz_n => clock_100MHz_n, 
-      clock_200MHz   => clock_200MHz, 
                       
       ft2232h_rxf_n  => ft2232h_rxf_n, 
       ft2232h_txe_n  => ft2232h_txe_n,      
@@ -96,13 +91,13 @@ begin
    Digitalclockmanager_inst :
    entity work.DigitalClockManager
    port map   (
-      -- Clock in ports
+      -- Clock in port
       clk_in1 => clock_50MHz,
       
       -- Clock out ports
-      clk_out1 => clock_200MHz,
-      clk_out2 => clock_100MHz,
-      clk_out3 => clock_100MHz_n
+      clk_out1 => clock_100MHz,
+      clk_out2 => clock_110MHz,
+      clk_out3 => clock_110MHz_n
    ); 
 
 end;

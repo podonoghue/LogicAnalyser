@@ -11,10 +11,9 @@ END entity;
 ARCHITECTURE behavior OF LogicAnalyser_tb IS 
  
    --Inputs
-   signal   reset                 : std_logic       := '1';
    signal   clock_100MHz          : std_logic       := '0';
-   signal   clock_100MHz_n        : std_logic       := '1';
-   signal   clock_200MHz          : std_logic       := '0';
+   signal   clock_110MHz          : std_logic       := '0';
+   signal   clock_110MHz_n        : std_logic       := '1';
                                                   
 	-- FT2232H Interface                           
    signal   ft2232h_rxf_n         : std_logic       := '1';
@@ -34,13 +33,14 @@ ARCHITECTURE behavior OF LogicAnalyser_tb IS
    signal   sdram_ras_n         : std_logic;
    signal   sdram_cas_n         : std_logic;
    signal   sdram_we_n          : std_logic;
-   signal   sdram_dqm           : std_logic_vector( 1 downto 0);
-   signal   sdram_addr          : std_logic_vector(12 downto 0);
-   signal   sdram_ba            : std_logic_vector( 1 downto 0);
+   signal   sdram_dqm           : std_logic_vector( 1 downto 0) := (others => '0');
+   signal   sdram_addr          : std_logic_vector(12 downto 0) := (others => '0');
+   signal   sdram_ba            : std_logic_vector( 1 downto 0) := (others => '0');
    signal   sdram_data          : std_logic_vector(15 downto 0) := (others => 'Z');
 
    -- Clock period definitions
-   constant clock_period        : time    := 5 ns;
+   constant clock100MHz_period  : time    := 10 ns;
+   constant clock110MHz_period  : time    :=  9 ns; -- 110 MHz
    signal   complete            : boolean := false;
    signal   writeLutsComplete   : boolean := false;
 
@@ -67,10 +67,9 @@ begin
    LogicAnalyser_uut:
    entity work.LogicAnalyser 
    port map (
-      reset           => reset,
       clock_100MHz    => clock_100MHz,
-      clock_100MHz_n  => clock_100MHz_n,
-      clock_200MHz    => clock_200MHz,
+      clock_110MHz    => clock_110MHz,
+      clock_110MHz_n  => clock_110MHz_n,
                       
       -- FT2232H      
       ft2232h_rxf_n   => ft2232h_rxf_n,
@@ -99,43 +98,33 @@ begin
    );
 
    -- clock process definitions
-   clock_200MHz_process :
-   process
-   begin
-      while not complete loop
-         clock_200MHz <= '1';
-         wait for clock_period/2;
-         clock_200MHz <= '0';
-         wait for clock_period/2;
-      end loop;
-      -- kill clock
-      wait;
-   end process; 
-   
    clock_100MHz_process :
    process
    begin
       while not complete loop
-         clock_100MHz   <= '1';
-         clock_100MHz_n <= '0';
-         wait for clock_period;
-         clock_100MHz   <= '0';
-         clock_100MHz_n <= '1';
-         wait for clock_period;
+         clock_100MHz <= '1';
+         wait for clock100MHz_period/2;
+         clock_100MHz <= '0';
+         wait for clock100MHz_period/2;
       end loop;
       -- kill clock
       wait;
    end process; 
    
-   -- Stimulus processes
-   MiscProc:
+   clock_110MHz_process :
    process
    begin
-      reset <= '1';
-      wait for 5 * clock_period;
-      reset <= '0';
+      while not complete loop
+         clock_110MHz   <= '1';
+         clock_110MHz_n <= '0';
+         wait for clock110MHz_period/1;
+         clock_110MHz   <= '0';
+         clock_110MHz_n <= '1';
+         wait for clock110MHz_period/1;
+      end loop;
+      -- kill clock
       wait;
-   end process;
+   end process; 
    
    -- FT2232 -> Host
    LoadLuts: 
@@ -276,11 +265,8 @@ begin
    variable receiveData : DataBusType;
    
    begin
-      status <= "Reset ";
+      status <= "Start ";
    
-      if (reset = '1') then
-         wait until (reset = '0');
-      end if;  
       wait for 60 ns;
       
       status <= "LUTs  ";
@@ -401,10 +387,6 @@ begin
    );
    
    begin
-      if (reset = '1') then
-         wait until (reset = '0');
-      end if;         
-
       wait until armed_o = '1';
       
       wait until falling_edge(clock_100MHz);

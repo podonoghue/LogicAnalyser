@@ -10,9 +10,8 @@ use unisim.vcomponents.all;
 
 entity SDRAM_Controller is
    Port (
-      clock_100MHz       : in    std_logic;
-      clock_100MHz_n     : in    std_logic;
-      reset              : in    std_logic;
+      clock_110MHz       : in    std_logic;
+      clock_110MHz_n     : in    std_logic;
 
       -- Interface to issue reads or write data
       cmd_wr_clear       : in    std_logic;
@@ -44,7 +43,7 @@ end SDRAM_Controller;
 
 architecture Behavioral of SDRAM_Controller is
 
-   signal sdram_dataOut           : sdram_phy_DataType;
+   signal sdram_dataOut           : sdram_phy_DataType  := (others => '0');
    signal sdram_dataIn            : sdram_phy_DataType;
 
    signal wr_address              : sdram_AddrType;
@@ -133,7 +132,7 @@ architecture Behavioral of SDRAM_Controller is
    constant CAS_3           : sdram_phy_AddrType := "0000000110000";
 
    -- Latency is 2, don't use burst
-   constant MODE_REG        : sdram_phy_AddrType := CAS_2 or BURST_NONE;
+   constant MODE_REG        : sdram_phy_AddrType := CAS_3 or BURST_NONE;
 
    -- Shift-register to indicate when to capture the read value on the SDRAM data bus
    constant READ_LATENCY       : natural := to_integer(unsigned(MODE_REG(5 downto 4)));  -- must agree with MODE_REG value
@@ -222,7 +221,7 @@ architecture Behavioral of SDRAM_Controller is
    signal restart_counters      : std_logic;
    signal rd_data_ready         : std_logic;
 
-   signal sdram_data_90         : sdram_phy_DataType;
+   signal sdram_data_90         : sdram_phy_DataType := (others => '0');
 
    -------------------------------------------------------------
    -- Maps readable command names (for debug) to physical values
@@ -260,8 +259,8 @@ begin
       ce => '1',
       d0 => '0',
       d1 => '1',
-      c0 => clock_100MHz,
-      c1 => clock_100MHz_n,
+      c0 => clock_110MHz,
+      c1 => clock_110MHz_n,
       q  => sdram_clk
    );
 
@@ -276,10 +275,10 @@ begin
                       refresh_cycle_counter(refresh_cycle_counter'left-1);
 
    Counter_Sync_proc:
-   process (clock_100MHz)
+   process (clock_110MHz)
    begin
-      if rising_edge(clock_100MHz) then
-         if ((reset = '1') or (restart_counters = '1')) then
+      if rising_edge(clock_110MHz) then
+         if (restart_counters = '1') then
             refresh_cycle_counter      <= (others => '0');
             initialisation_counter     <= (others => '0');
          else
@@ -297,40 +296,32 @@ begin
    cmd_wr_accepted <= cmd_wr_accepted_sm;
 
    Sdram_Sync_proc1n:
-   process (clock_100MHz_n)
+   process (clock_110MHz_n)
    begin
-      if rising_edge(clock_100MHz_n) then
-         if (reset = '1') then
-            sdram_data_90     <= (others => '0');
-         else
-            if (rd_data_ready = '1') then
-               sdram_data_90  <= sdram_data;
-            end if;
+      if rising_edge(clock_110MHz_n) then
+         if (rd_data_ready = '1') then
+            sdram_data_90  <= sdram_data;
          end if;
       end if;
    end process;
 
    Sdram_Sync_proc1:
-   process (clock_100MHz)
+   process (clock_110MHz)
    begin
-      if rising_edge(clock_100MHz) then
-         if (reset = '1') then
-            cmd_rd_data       <= (others => '0');
-            cmd_rd_data_ready <= '0';
-         else
-            cmd_rd_data_ready <= rd_data_ready;
-            cmd_rd_data       <= sdram_data_90;
-         end if;
+      if rising_edge(clock_110MHz) then
+         cmd_rd_data_ready <= rd_data_ready;
+         cmd_rd_data       <= sdram_data_90;
       end if;
    end process;
 
    Sdram_Sync_proc2:
-   process (clock_100MHz)
+   process (clock_110MHz)
    begin
+      sdram_cs_n <= '0';
       -- Pipeline signals to/from SDRAM
-      if rising_edge(clock_100MHz) then
+      if rising_edge(clock_110MHz) then
          state             <= next_state;
-         sdram_cs_n        <= cmd(command)(3);
+         --sdram_cs_n        <= cmd(command)(3);
          sdram_ras_n       <= cmd(command)(2);
          sdram_cas_n       <= cmd(command)(1);
          sdram_we_n        <= cmd(command)(0);
@@ -360,28 +351,9 @@ begin
             rd_data_ready <= '0';
          end if;
 
-         if (reset = '1') then
-            state             <= s_startup;
-            sdram_cs_n        <= '1';
-            sdram_ras_n       <= '1';
-            sdram_cas_n       <= '1';
-            sdram_we_n        <= '1';
-            sdram_addr        <= (others => '0');
-            sdram_ba          <= (others => '0');
-            sdram_dqm         <= (others => '0');
-            sdram_dq_hiz      <= '1';
-            sdram_dataOut     <= (others => '0');
-            rd_data_ready     <= '0';
-            data_ready_delay  <= (others => '0');
-         end if;
+         write_pending <= next_write_pending;
 
-         if (reset = '1') then
-            write_pending <= '0';
-         else
-            write_pending <= next_write_pending;
-         end if;
-
-         if ((reset = '1') or (cmd_wr_clear = '1')) then
+         if (cmd_wr_clear = '1') then
             wr_address        <= (others => '0');
          elsif (increment_write_address = '1') then
             wr_address <= std_logic_vector(unsigned(wr_address) + 1);

@@ -45,7 +45,6 @@ use work.LogicAnalyserPackage.all;
 --==============================================================================================
 entity TriggerBlock is
    port ( 
-      reset          : in  std_logic;
       clock          : in  std_logic;
 
       -- Bus interface
@@ -102,7 +101,6 @@ begin
    TriggerBusInterface_inst:
    entity work.TriggerBusInterface 
    PORT MAP(
-		reset             => reset,
 		clock             => clock,
                         
 		dataIn            => dataIn ,
@@ -122,8 +120,6 @@ begin
 --   ConfigData_inst:
 --   entity ConfigData
 --      port map (
---         reset          => reset,
---
 --         -- LUT serial configuration          
 --         lut_clock      => lut_clock,      -- Used for LUT shift register          
 --         lut_config_ce  => lut_config_ce,  -- Clock enable for LUT shift register
@@ -207,7 +203,6 @@ begin
    entity work.TriggerStateMachine 
    port map (
 		clock                   => clock,
-		reset                   => reset,
 		enable                  => enable,
       
       doSample                => doSample,

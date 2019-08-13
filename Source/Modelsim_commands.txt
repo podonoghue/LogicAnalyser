@@ -1,0 +1,20 @@
+vcom logicanalyserpackage 
+vcom prescaler 
+vcom prescaler_tb
+vopt +acc prescaler_tb -o prescaler_tb_opt 
+restart -force 
+run 
+; run -all
+
+vopt +acc fifo_sdram_tb -o fifo_sdram_tb_opt 
+vsim work.fifo_sdram_tb_opt
+
+vopt +acc LogicAnalyser_tb -o LogicAnalyser_tb_opt 
+
+vopt +acc fifo_2clock_tb -o fifo_2clock_tb_opt
+restart -force 
+run 
+
+vopt +acc fifo_sdram_tb -o fifo_sdram_tb_opt
+restart -force 
+run -all

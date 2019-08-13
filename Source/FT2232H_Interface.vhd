@@ -7,33 +7,32 @@ use work.LogicAnalyserPackage.all;
 
 entity ft2232h_Interface is
    port ( 
-      reset                : in   std_logic;
-      clock_100MHz         : in   std_logic;
+      clock_100MHz                : in   std_logic;
 
       -- FT2232 interface
-      ft2232h_rxf_n        : in    std_logic;   -- Rx FIFO Full
-      ft2232h_rd_n         : out   std_logic;   -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
-      ft2232h_txe_n        : in    std_logic;   -- Tx FIFO Empty 
-      ft2232h_wr_n         : out   std_logic;   -- Tx FIFO Write (Data captured on rising edge)
-      ft2232h_data         : inOut DataBusType; -- FIFO Data I/O
-      ft2232h_siwu_n       : out   std_logic;   -- Flush USB buffer(Send Immediate / WakeUp signal)
+      ft2232h_rxf_n               : in    std_logic;     -- Rx FIFO Full
+      ft2232h_rd_n                : out   std_logic;     -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
+      ft2232h_txe_n               : in    std_logic;     -- Tx FIFO Empty 
+      ft2232h_wr_n                : out   std_logic;     -- Tx FIFO Write (Data captured on rising edge)
+      ft2232h_data                : inOut DataBusType;   -- FIFO Data I/O
+      ft2232h_siwu_n              : out   std_logic;     -- Flush USB buffer(Send Immediate / WakeUp signal)
 
       -- Receive interface      
-      host_receive_data_request   : in    std_logic; -- Request data from host
-      host_receive_data_available : out   std_logic; -- Requested data from host is available
-      host_receive_data           : out   DataBusType;
+      host_receive_data_request   : in    std_logic;     -- Request data from host
+      host_receive_data_available : out   std_logic;     -- Requested data from host is available
+      host_receive_data           : out   DataBusType;   -- Receive data
 
       -- Send interface
-      host_transmit_data_ready    : out   std_logic; -- Indicates interface is ready to send data to host
-      host_transmit_data          : in    DataBusType;
-      host_transmit_data_request  : in    std_logic  -- Send data to host request
+      host_transmit_data_ready    : out   std_logic;     -- Indicates interface is ready to send data to host
+      host_transmit_data          : in    DataBusType;   -- Transmit data
+      host_transmit_data_request  : in    std_logic      -- Send data to host request
    );
 end ft2232h_Interface;
 
 architecture Behavioral of ft2232h_Interface is
 
    type StateType is (s_idle, s_receive, s_receive_release, s_send, s_send_release );
-   signal state : StateType;
+   signal state : StateType := s_idle;
    
    signal   delayCount     : natural range 0 to 5;
    constant rd_low_delay   : natural := 5;
@@ -47,9 +46,9 @@ architecture Behavioral of ft2232h_Interface is
    signal ft2232h_rd       : std_logic;   -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
    signal ft2232h_wr       : std_logic;   -- Tx FIFO Write (Data captured on rising edge)
 
-   signal ft2232h_data_oe  : std_logic;
-   signal ft2232h_data_ff  : DataBusType;
-   signal host_transmit_data_ready_internal: std_logic;
+   signal ft2232h_data_oe  : std_logic                   := '0';
+   signal ft2232h_data_ff  : DataBusType                 := (others => '0');
+   signal host_transmit_data_ready_internal : std_logic  := '0';
    
 begin
    ft2232h_siwu_n <= '1';
@@ -64,7 +63,7 @@ begin
    
    host_transmit_data_ready <= host_transmit_data_ready_internal;
       
-   process(clock_100MHz, reset)
+   process(clock_100MHz)
    begin
       if rising_edge(clock_100MHz) then
          ft2232h_rd                          <= '0';
@@ -134,10 +133,6 @@ begin
                   delayCount <= delayCount + 1;
                end if;
          end case;
-         if (reset = '1') then
-            state <= s_idle;
-            host_receive_data <= (others => '0');
-         end if;
       end if;
    end process;
 

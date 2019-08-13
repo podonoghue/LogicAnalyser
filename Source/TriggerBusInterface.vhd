@@ -7,7 +7,6 @@ use work.LogicAnalyserPackage.all;
 
 entity TriggerBusInterface is
    Port ( 
-      reset          : in   std_logic;
       clock          : in   std_logic;
 
       wr             : in   std_logic;
@@ -29,10 +28,10 @@ end TriggerBusInterface;
 architecture Behavioral of TriggerBusInterface is
 
 type StateType is (s_idle, s_write);
-signal state : StateType;
+signal state : StateType := s_idle;
 
-signal bitCount  : integer range 0 to DataBusType'length-1;
-signal dataShiftRegister : DataBusType;
+signal bitCount          : integer range 0 to DataBusType'length-1;
+signal dataShiftRegister : DataBusType := (others => '0');
 
 begin
    lut_clock     <= clock;
@@ -75,10 +74,6 @@ begin
                   bitCount <= bitCount + 1;
                end if;
          end case;
-         if (reset = '1') then
-            state              <= s_idle;
-            dataShiftRegister  <= (others => '0');
-         end if;
       end if;
    end process;
 

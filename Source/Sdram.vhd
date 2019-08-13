@@ -33,21 +33,21 @@ architecture behavioral of sdram is
 
    signal memory        : memory_array  := (others => (x"A55A"));
    signal active_row    : row_array     := (others => (others => '0'));
-   signal is_row_active : std_logic_vector( 3 downto 0);
-   signal mode_reg      : std_logic_vector(12 downto 0);
+   signal is_row_active : std_logic_vector( 3 downto 0) := (others => '0');
+   signal mode_reg      : std_logic_vector(12 downto 0) := (others => '0');
    
    alias burst_mode     : std_logic        is mode_reg(9);
    alias burst_length   : std_logic_vector is mode_reg(2 downto 0);
    alias cas_latency    : std_logic_vector is mode_reg(6 downto 4);
 
-   signal data_delay1   : std_logic_vector(15 downto 0);
-   signal data_delay2   : std_logic_vector(15 downto 0);
-   signal data_delay3   : std_logic_vector(15 downto 0);
+   signal data_delay1   : std_logic_vector(15 downto 0) := (others => '0');
+   signal data_delay2   : std_logic_vector(15 downto 0) := (others => '0');
+   signal data_delay3   : std_logic_vector(15 downto 0) := (others => '0');
    signal addr_index    : std_logic_vector(13 downto 0) := (others => '0');
 
-   signal wr_mask       : std_logic_vector( 1 downto 0);
-   signal wr_data       : std_logic_vector(15 downto 0);
-   signal wr_burst      : std_logic_vector( 8 downto 0);
+   signal wr_mask       : std_logic_vector( 1 downto 0) := (others => '0');
+   signal wr_data       : std_logic_vector(15 downto 0) := (others => '0');
+   signal wr_burst      : std_logic_vector( 8 downto 0) := (others => '0');
    signal rd_burst      : std_logic_vector( 9 downto 0) := (others => '0');
 
    signal sdram_data_out : std_logic_vector(15 downto 0) := (others => '0');
