@@ -70,7 +70,7 @@ begin
       -- Trigger logic 
       sample         => sample,       
       armed_o        => armed,      
-      sampleEnable_o => open,
+      sampling_o     => open,
 
       -- SDRAM Interface
       initializing => initializing,

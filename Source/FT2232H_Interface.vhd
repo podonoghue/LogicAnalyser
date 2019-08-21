@@ -83,8 +83,9 @@ begin
                
                if (host_transmit_data_ready_internal = '1') and (host_transmit_data_request = '1') then
                   ft2232h_data_ff <= host_transmit_data;
+                  ft2232h_data_oe   <= '1';
                   state           <=  s_send;
-                  ft2232h_wr      <= '1';
+                  --ft2232h_wr      <= '1';
                   delayCount      <= 0;
                elsif (ft2232h_rxf = '1') and (host_receive_data_request = '1') then
                   state       <= s_receive;

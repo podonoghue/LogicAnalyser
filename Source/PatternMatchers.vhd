@@ -75,8 +75,8 @@ constant COMPARATORS_PER_BLOCK : positive := 2;
 constant NUM_TRIGGER_BLOCKS    : positive := MAX_TRIGGER_PATTERNS/COMPARATORS_PER_BLOCK;
 
 -- Trigger outputs for each step 
-signal triggers                : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0);
-signal triggerFFs              : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0);
+signal triggers                : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0) := (others => '0');
+signal triggerFFs              : std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0) := (others => '0');
 
 -- All pattern match values across all steps
 signal conditions              : TriggerConditionArray;

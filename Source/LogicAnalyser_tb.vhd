@@ -22,10 +22,11 @@ ARCHITECTURE behavior OF LogicAnalyser_tb IS
    signal   ft2232h_wr_n          : std_logic       := '1';
    signal   ft2232h_data          : DataBusType     := (others => 'Z');
                                   
-   signal   armed_o               : std_logic;
-   signal   sample                : SampleDataType  := (others => '0');   
-   signal   sampleEnable          : std_logic;
-   
+   signal   armed               : std_logic;
+   signal   sampling            : std_logic;
+   signal   sample              : SampleDataType  := (others => '0');   
+   signal   doSample            : std_logic;
+
    signal   initializing        : std_logic;
    signal   sdram_clk           : std_logic;
    signal   sdram_cke           : std_logic;
@@ -42,7 +43,7 @@ ARCHITECTURE behavior OF LogicAnalyser_tb IS
    constant clock100MHz_period  : time    := 10 ns;
    constant clock110MHz_period  : time    :=  9 ns; -- 110 MHz
    signal   complete            : boolean := false;
-   signal   writeLutsComplete   : boolean := false;
+--   signal   writeLutsComplete   : boolean := false;
 
    signal   status : string(1 to 6);
    
@@ -79,8 +80,9 @@ begin
       ft2232h_data    => ft2232h_data,
                       
       sample          => sample,
-      armed_o         => armed_o,
-      sampleEnable_o  => sampleEnable,
+      armed_o         => armed,
+      sampling_o      => sampling,
+      doSample_o      => doSample,
       
       -- SDRAM        
       initializing    => initializing,
@@ -117,10 +119,10 @@ begin
       while not complete loop
          clock_110MHz   <= '1';
          clock_110MHz_n <= '0';
-         wait for clock110MHz_period/1;
+         wait for clock110MHz_period/2;
          clock_110MHz   <= '0';
          clock_110MHz_n <= '1';
-         wait for clock110MHz_period/1;
+         wait for clock110MHz_period/2;
       end loop;
       -- kill clock
       wait;
@@ -181,7 +183,7 @@ begin
       if (t7>ft2232h_txe_n'last_active) then
          wait for t7-ft2232h_txe_n'last_active;
       end if;
-      --wait for 100 ns;
+      report "Sample = 0b" & to_string(rd_data);
    end procedure;
    
 
@@ -262,7 +264,7 @@ begin
 --      C_WR_CONTROL, "00000001", "00000001", "00000000"
    );
    
-   variable receiveData : DataBusType;
+   variable receiveData   : DataBusType;
    
    begin
       status <= "Start ";
@@ -279,45 +281,94 @@ begin
          wait until (initializing = '0');
       end if;
       
-      status <= "Read20";
-      sendToAnalyser(C_RD_BUFFER);
-      sendToAnalyser(std_logic_vector(to_unsigned(20, 8)));
-      
-      status <= "Data20";
-      for index in 1 to 2*20 loop
-         receiveFromAnalyser(receiveData);
-      end loop;
+      status <= "W-Ptrg";
+      sendToAnalyser(C_WR_PRETRIG);
+      sendToAnalyser("00000011");
+      sendToAnalyser(std_logic_vector(to_unsigned(100/65526, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned((100/256) mod 256, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned(100 mod 256, 8)));
 
-      status <= "ClrCnt";
-      sendToAnalyser(C_WR_CONTROL);
-      sendToAnalyser("00000001");
-      sendToAnalyser(C_CONTROL_CLEAR_COUNTS);
+      status <= "W-Size";
+      sendToAnalyser(C_WR_CAPTURE);
+      sendToAnalyser("00000011");
+      sendToAnalyser(std_logic_vector(to_unsigned(400/65526, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned((400/256) mod 256, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned(400 mod 256, 8)));
 
       status <= "Idle  ";
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
       sendToAnalyser("00000000");
 
-      status <= "Read20";
-      sendToAnalyser(C_RD_BUFFER);
-      sendToAnalyser(std_logic_vector(to_unsigned(20, 8)));
-      
-      for index in 1 to 2*20 loop
-         receiveFromAnalyser(receiveData);
-      end loop;
-
       status <= "Spd50n";
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
-      sendToAnalyser(C_CONTROL_S_50ns);
+--      sendToAnalyser(C_CONTROL_S_50ns);
+      sendToAnalyser(C_CONTROL_S_10ns);
+
+      status <= "RdStat";
+      sendToAnalyser(C_RD_STATUS);
+      sendToAnalyser("00000001");
+      receiveFromAnalyser(receiveData);
 
       status <= "Enable";
       sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser("00000001");
-      sendToAnalyser(C_CONTROL_ENABLE or C_CONTROL_S_50ns);
+--      sendToAnalyser(C_CONTROL_S_50ns or C_CONTROL_START_ACQ);
+      sendToAnalyser(C_CONTROL_S_10ns or C_CONTROL_START_ACQ);
+
+      status <= "Poll  ";
+      loop
+         sendToAnalyser(C_RD_STATUS);
+         sendToAnalyser("00000001");
+         receiveFromAnalyser(receiveData);
+         case receiveData(2 downto 0) is
+            when "000"  => status <= "Idle  ";
+            when "001"  => status <= "PreTrg";
+            when "010"  => status <= "Armed ";
+            when "011"  => status <= "Run   ";
+            when "100"  => status <= "Done  ";
+            when others => status <= "??????";
+         end case;
+         exit when (receiveData(2 downto 0) = "100");
+      end loop;
+      wait for 200 ns;
+      
+      status <= "Rd200a";
+      sendToAnalyser(C_RD_BUFFER);
+      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));
+      for index in 1 to 200 loop
+         receiveFromAnalyser(receiveData);
+      end loop;
+      
+      status <= "Rd200b";
+      sendToAnalyser(C_RD_BUFFER);
+      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));
+      for index in 1 to 200 loop
+         receiveFromAnalyser(receiveData);
+      end loop;
+      
+      status <= "Rd200c";
+      sendToAnalyser(C_RD_BUFFER);
+      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));
+      for index in 1 to 200 loop
+         receiveFromAnalyser(receiveData);
+      end loop;
+      
+      status <= "Rd200d";
+      sendToAnalyser(C_RD_BUFFER);
+      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));      
+      for index in 1 to 200 loop
+         receiveFromAnalyser(receiveData);
+      end loop;
 
       status <= "Done  ";
-      writeLutsComplete <= true;
+--      writeLutsComplete <= true;
+
+      wait for 100 ns;
+      complete <= true;
+
+      wait for 40 ns;
       wait;
    end process;
 
@@ -327,76 +378,95 @@ begin
    variable stimulus : StimulusArray := (
    --  111111
    --  5432109876543210
+      "0000111111111111", 
+      "0001111111111111", 
+      "0010111111111111", 
+      "0011111111111111", 
+      "0100111111111111", 
+      "0101111111111111", 
+      "0110111111111111", 
+      "0111111111111111", 
+      "1000111111111111", 
+      "1001111111111111", 
+      "1010111111111111", 
+      "1011111111111111", 
+      "1100011111111111", 
+      "1101111111111110", 
+      "1110111111111110", 
       "1111111111111111", 
+      "0000111111111111", 
+      "0001111111111110", 
+      "0010111111111110", 
+      "0011111111111110", 
+      "0100111111111110", 
+      "0101111111111110", 
+      "0110111111111110", 
+      "0111111111111110", 
+      "1000111111111110", 
+      "1001111111111111", 
+      "1010111111111111", 
+      "1011111111111111", 
+      "1100111111111111", 
+      "1101111111111111", 
+      "1110111111111111", 
       "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
+      "0000111111111111", 
+      "0001111111111111", 
+      "0010111111111110", 
+      "0011111111111110", 
+      "0100111111111111", 
+      "0101111111111111", 
+      "0110111111111111", 
+      "0111111111111110", 
+      "1000111111111111", 
+      "1001111111111110", 
+      "1010111111111111", 
+      "1011111111111110", 
+      "1100111111111111", 
+      "1101111111111110", 
+      "1110111111111111", 
       "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      "1111111111111111", 
-      "1111111111111110", 
-      others => x"0000"
+      "0000111111111111", 
+      "0001111111111110", 
+      "0010111111111111", 
+      "0011111111111110", 
+      "0100111111111111", 
+      "0101111111111110", 
+      "0110111111111111", 
+      "0111111111111110", 
+      "1000111111111111", 
+      "1001111111111110", 
+      "1010111111111111", 
+      "1011111111111110", 
+      "1100111111111111", 
+      others => x"1234"
    );
    
+   variable sampleCounter : SampleDataType := (others => '0');
+
    begin
-      wait until armed_o = '1';
-      
+      wait until armed = '1';
       wait until falling_edge(clock_100MHz);
+
       for index in stimulus'range loop
+         wait until (doSample = '1') and falling_edge(clock_100MHz);
          sample <= stimulus(index);
-         wait until (sampleEnable = '1') and falling_edge(clock_100MHz);
       end loop;
       
-      wait for 1000 ns;
-      complete <= true;
+      while (sampling = '1') loop
+         wait until (doSample = '1') and falling_edge(clock_100MHz);
+         sample <= sampleCounter;
+         sampleCounter := std_logic_vector(unsigned(sampleCounter) + 1);
+      end loop;
+
+      -- if (sampling = '1') then
+         -- wait until sampling = '0';
+      -- end if;
+      
+      -- wait for 100 ns;
+      -- complete <= true;
+
+      -- wait for 40 ns;
       
       wait;
    end process;

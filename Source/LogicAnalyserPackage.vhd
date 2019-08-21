@@ -103,28 +103,39 @@ package LogicAnalyserPackage is
    constant C_TX_BITNUM     : natural := 7;
 
    constant C_NOP           : DataBusType := "00000000" or C_RECEIVE_MODE;
+   
    constant C_LUT_CONFIG    : DataBusType := "00000001" or C_RECEIVE_MODE;
    constant C_WR_CONTROL    : DataBusType := "00000010" or C_RECEIVE_MODE;
+   constant C_WR_PRETRIG    : DataBusType := "00000011" or C_RECEIVE_MODE;
+   constant C_WR_CAPTURE    : DataBusType := "00000100" or C_RECEIVE_MODE;
 
    constant C_RD_BUFFER     : DataBusType := "00000001" or C_TRANSMIT_MODE;
+   constant C_RD_STATUS     : DataBusType := "00000010" or C_TRANSMIT_MODE;
 
-   type AnalyserCmdType is (ACmd_NOP, ACmd_LUT_CONFIG, ACmd_WR_CONTROL, ACmd_RD_BUFFER);
+   type AnalyserCmdType is (
+      ACmd_NOP, 
+      ACmd_LUT_CONFIG, 
+      ACmd_WR_CONTROL, 
+      ACmd_RD_BUFFER, 
+      ACmd_WR_PRETRIG, 
+      ACmd_WR_CAPTURE, 
+      ACmd_RD_STATUS
+   );
 
    --==============================================================
    --
-   constant C_CONTROL_ENABLE        : DataBusType := "00000001";
+   constant C_CONTROL_START_ACQ     : DataBusType := "00000001";
    constant C_CONTROL_CLEAR         : DataBusType := "00000010";
-   constant C_CONTROL_CLEAR_COUNTS  : DataBusType := "00000100";
    
    constant C_CONTROL_DIV1          : DataBusType := "00000000";
-   constant C_CONTROL_DIV2          : DataBusType := "00001000";
-   constant C_CONTROL_DIV5          : DataBusType := "00010000";
-   constant C_CONTROL_DIV10         : DataBusType := "00011000";
+   constant C_CONTROL_DIV2          : DataBusType := "00000100";
+   constant C_CONTROL_DIV5          : DataBusType := "00001000";
+   constant C_CONTROL_DIV10         : DataBusType := "00001100";
    
    constant C_CONTROL_DIVx1         : DataBusType := "00000000";
-   constant C_CONTROL_DIVx10        : DataBusType := "00100000";
-   constant C_CONTROL_DIVx100       : DataBusType := "01000000";
-   constant C_CONTROL_DIVx1000      : DataBusType := "01100000";
+   constant C_CONTROL_DIVx10        : DataBusType := "00010000";
+   constant C_CONTROL_DIVx100       : DataBusType := "00100000";
+   constant C_CONTROL_DIVx1000      : DataBusType := "00110000";
 
    constant C_CONTROL_S_10ns  : DataBusType := C_CONTROL_DIVx1    or C_CONTROL_DIV1;
    constant C_CONTROL_S_20ns  : DataBusType := C_CONTROL_DIVx1    or C_CONTROL_DIV2;
@@ -158,7 +169,10 @@ package body LogicAnalyserPackage is
          when C_NOP        => return ACmd_NOP;
          when C_LUT_CONFIG => return ACmd_LUT_CONFIG;
          when C_WR_CONTROL => return ACmd_WR_CONTROL;
+         when C_WR_PRETRIG => return ACmd_WR_PRETRIG;
+         when C_WR_CAPTURE => return ACmd_WR_CAPTURE;
          when C_RD_BUFFER  => return ACmd_RD_BUFFER;
+         when C_RD_STATUS  => return ACmd_RD_STATUS;
          when others       => return ACmd_NOP;
       end case;
    end function;
