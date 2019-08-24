@@ -80,7 +80,7 @@ entity PatternCombiner is
          triggers       : out std_logic_vector(MAX_TRIGGER_STEPS-1 downto 0); 
          
          -- LUT serial configuration: MAX_TRIGGER_STEPS*MAX_TRIGGER_PATTERNS)/4 LUTs
-         lut_clock      : in  std_logic;  -- Used to clock LUT chain
+         clock          : in  std_logic;  -- Used to clock LUT chain
          lut_config_ce  : in  std_logic;  -- Clock enable for LUT shift register
          lut_config_in  : in  std_logic;  -- Serial in for LUT shift register (MSB first)
          lut_config_out : out std_logic   -- Serial out for LUT shift register
@@ -109,7 +109,7 @@ begin
          )
          port map (
             -- Reconfigure shift register
-            clk => lut_clock,             -- LUT shift-register clock
+            clk => clock,             -- LUT shift-register clock
             ce  => lut_config_ce,         -- LUT shift-register clock enable
             cdi => lut_chainIn(index),    -- Serial configuration data input (MSB first)
             cdo => lut_chainOut(index),   -- Serial configuration data output
@@ -140,7 +140,7 @@ begin
          )
          port map (
             -- Reconfigure shift register
-            clk => lut_clock,             -- LUT shift-register clock
+            clk => clock,             -- LUT shift-register clock
             ce  => lut_config_ce,         -- LUT shift-register clock enable
             cdi => lut_chainIn(index),    -- Serial configuration data input (MSB first)
             cdo => lut_chainOut(index),   -- Serial configuration data output

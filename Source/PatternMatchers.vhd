@@ -62,7 +62,6 @@ entity PatternMatchers is
       --   Comparators: MAX_TRIGGER_STEPS * MAX_TRIGGER_PATTERNS/2 * NUM_INPUTS/2 LUTs
       --   Combiner:    MAX_TRIGGER_STEPS*MAX_TRIGGER_PATTERNS/4 LUTs
       --   Flags:       NUM_FLAGS * MAX_TRIGGER_STEPS/16
-      lut_clock            : in  std_logic;  -- Used to clock LUT chain
       lut_config_ce        : in  std_logic;  -- Clock enable for LUT shift register
       lut_config_in        : in  std_logic;  -- Serial in for LUT shift register (MSB first)
       lut_config_out       : out std_logic   -- Serial out for LUT shift register
@@ -112,7 +111,7 @@ begin
             trigger0       => conditions(triggerStep)(COMPARATORS_PER_BLOCK*index),    -- Comparison output
 
             -- LUT serial configuration (NUM_INPUTS/2 LUTs)
-            lut_clock      => lut_clock,                      -- Used to clock LUT chain
+            clock      => clock,                      -- Used to clock LUT chain
             lut_config_ce  => lut_config_ce,                  -- Clock enable for LUT shift register
             lut_config_in  => lut_chainIn(lut_config_index),  -- Serial in for LUT shift register (MSB first)
             lut_config_out => lut_chainOut(lut_config_index)  -- Serial out for LUT shift register
@@ -132,7 +131,7 @@ begin
       triggers       => triggers,         -- Trigger outputs for each step 
                                      
       -- LUT serial configuration (MAX_TRIGGER_STEPS*MAX_TRIGGER_PATTERNS)/4 LUTs)
-      lut_clock      => lut_clock,        -- Used to clock LUT chain
+      clock          => clock,            -- Used to clock LUT chain
       lut_config_ce  => lut_config_ce,    -- LUT shift-register clock enable
       lut_config_in  => lut_chainIn(0),   -- Serial configuration data input (MSB first)
       lut_config_out => lut_chainOut(0)   -- Serial configuration data output

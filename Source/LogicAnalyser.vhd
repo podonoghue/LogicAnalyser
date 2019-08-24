@@ -10,98 +10,97 @@ use unisim.vcomponents.all;
 
 entity LogicAnalyser is
    port (
-      clock_100MHz     : in    std_logic;
-      clock_110MHz     : in    std_logic;
-      clock_110MHz_n   : in    std_logic;
+      clock_100MHz      : in    std_logic;
+      clock_110MHz      : in    std_logic;
+      clock_110MHz_n    : in    std_logic;
 
       -- FT2232 Interface
-      ft2232h_rxf_n    : in    std_logic;    -- Rx FIFO Full
-      ft2232h_rd_n     : out   std_logic;    -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
-      ft2232h_txe_n    : in    std_logic;    -- Tx FIFO Empty
-      ft2232h_wr_n     : out   std_logic;    -- Tx FIFO Write (Data captured on rising edge)
-      ft2232h_data     : inOut DataBusType;  -- FIFO Data I/O
-      ft2232h_siwu_n   : out   std_logic;    -- Flush USB buffer(Send Immediate / WakeUp signal)
+      ft2232h_rxf_n     : in    std_logic;    -- Rx FIFO Full
+      ft2232h_rd_n      : out   std_logic;    -- Rx FIFO Read (Output current data, FIFO advanced on rising edge)
+      ft2232h_txe_n     : in    std_logic;    -- Tx FIFO Empty
+      ft2232h_wr_n      : out   std_logic;    -- Tx FIFO Write (Data captured on rising edge)
+      ft2232h_data      : inOut DataBusType;  -- FIFO Data I/O
+      ft2232h_siwu_n    : out   std_logic;    -- Flush USB buffer(Send Immediate / WakeUp signal)
 
       -- Trigger logic
-      sample           : in    SampleDataType;
-      armed_o          : out   std_logic;
-      sampling_o       : out   std_logic;
-      doSample_o       : out   std_logic;
+      sample            : in    SampleDataType;
+      armed_o           : out   std_logic;
+      sampling_o        : out   std_logic;
+      doSample_o        : out   std_logic;
 
       -- SDRAM interface
-      initializing     : out   std_logic;
-      sdram_clk        : out   std_logic;
-      sdram_cke        : out   std_logic;
-      sdram_cs_n       : out   std_logic;
-      sdram_ras_n      : out   std_logic;
-      sdram_cas_n      : out   std_logic;
-      sdram_we_n       : out   std_logic;
-      sdram_dqm        : out   std_logic_vector( 1 downto 0);
-      sdram_addr       : out   std_logic_vector(12 downto 0);
-      sdram_ba         : out   std_logic_vector( 1 downto 0);
-      sdram_data       : inout std_logic_vector(15 downto 0)
+      initializing      : out   std_logic;
+      sdram_clk         : out   std_logic;
+      sdram_cke         : out   std_logic;
+      sdram_cs_n        : out   std_logic;
+      sdram_ras_n       : out   std_logic;
+      sdram_cas_n       : out   std_logic;
+      sdram_we_n        : out   std_logic;
+      sdram_dqm         : out   std_logic_vector( 1 downto 0);
+      sdram_addr        : out   std_logic_vector(12 downto 0);
+      sdram_ba          : out   std_logic_vector( 1 downto 0);
+      sdram_data        : inout std_logic_vector(15 downto 0)
   );
 end entity;
 
 architecture Behavioral of LogicAnalyser is
 
-   attribute ASYNC_REG : string;
-   attribute IOB       : string;
+   attribute ASYNC_REG                   : string;
+   attribute IOB                         : string;
 
    -- SDRAM FIFO data contains 2 flags + sample value
-   signal write_fifo_din                : std_logic_vector(SampleDataType'left+2 downto 0) := (others => '0');
-   signal write_fifo_dout               : std_logic_vector(SampleDataType'left+2 downto 0);
+   signal write_fifo_din                 : std_logic_vector(SampleDataType'left+2 downto 0) := (others => '0');
+   signal write_fifo_dout                : std_logic_vector(SampleDataType'left+2 downto 0) := (others => '0');
 
-   alias  preTrigger_sample             : std_logic is write_fifo_din(SampleDataType'left+2);
-   alias  trigger_sample                : std_logic is write_fifo_din(SampleDataType'left+1);
-   alias  currentSample                 : SampleDataType is write_fifo_din(SampleDataType'left downto 0);
+   alias  preTrigger_sample              : std_logic      is write_fifo_din(SampleDataType'left+2);
+   alias  trigger_sample                 : std_logic      is write_fifo_din(SampleDataType'left+1);
+   alias  currentSample                  : SampleDataType is write_fifo_din(SampleDataType'left downto 0);
 
    -- Sampling
    -- iob_sample -> currentSample -> lastSample
-   signal iob_sample                    : SampleDataType := (others => '0');
-   signal lastSample                    : SampleDataType := (others => '0');
+   signal iob_sample                     : SampleDataType := (others => '0');
+   signal lastSample                     : SampleDataType := (others => '0');
 
-   attribute IOB of iob_sample          : signal is "true";
+   attribute IOB of iob_sample           : signal is "true";
 
-   attribute ASYNC_REG of currentSample : signal is "true";
-   attribute ASYNC_REG of lastSample    : signal is "true";
+   attribute ASYNC_REG of currentSample  : signal is "true";
+   attribute ASYNC_REG of lastSample     : signal is "true";
 
    -- SDRAM interface
-   signal cmd_ready                     : std_logic;
+   signal cmd_ready                      : std_logic      := '0';
 
-   signal sdram_counter_clear           : std_logic;
-   signal sdram_rd                      : std_logic;
-   signal sdram_rd_data                 : sdram_phy_DataType := (others => '0');
-   signal sdram_rd_data_ready           : std_logic;
+   signal sdram_counter_clear            : std_logic      := '0';
+   signal sdram_rd                       : std_logic      := '0';
+   signal sdram_rd_data_ready            : std_logic      := '0';
+   signal sdram_rd_data                  : sdram_phy_DataType := (others => '0');
 
    -- Count of captured data
-   signal capture_counter               : sdram_AddrType;
+   signal capture_counter                : sdram_AddrType := (others => '0');
 
    -- Required pre-trigger captured data
-   signal preTrigger_amount             : sdram_AddrType := std_logic_vector(to_unsigned(1000, sdram_AddrType'length));
+   signal preTrigger_amount              : sdram_AddrType := (others => '0');
 
    -- Required captured data
-   signal capture_amount                : sdram_AddrType := std_logic_vector(to_unsigned(4000, sdram_AddrType'length));
+   signal capture_amount                 : sdram_AddrType := (others => '0');
 
-   signal sdram_rd_accepted             : std_logic;
-   -- signal initializing                 : std_logic;
+   signal sdram_rd_accepted              : std_logic      := '0';
 
-   signal lastReadData                  : DataBusType;
-   signal lastReadDataValid             : std_logic;
+   signal lastReadData                   : DataBusType    := (others => '0');
+   signal lastReadDataValid              : std_logic      := '0';
 
-   signal dataOutOred                   : DataBusType;
-   signal dataOutTriggerBlock           : DataBusType;
+   signal dataOutOred                    : DataBusType    := (others => '0');
+   signal dataOutTriggerBlock            : DataBusType    := (others => '0');
 
    -- FT2232H Interface
-   signal host_receive_data_request     : std_logic;
-   signal host_receive_data             : DataBusType;
-   signal host_receive_data_available   : std_logic;
+   signal host_receive_data_request      : std_logic      := '0';
+   signal host_receive_data              : DataBusType    := (others => '0');
+   signal host_receive_data_available    : std_logic      := '0';
 
-   signal host_transmit_data            : DataBusType := (others =>'0');
-   signal host_transmit_data_ready      : std_logic;
-   signal host_transmit_data_request    : std_logic;
+   signal host_transmit_data             : DataBusType    := (others =>'0');
+   signal host_transmit_data_ready       : std_logic      := '0';
+   signal host_transmit_data_request     : std_logic      := '0';
 
-   signal read_fifo_data                : DataBusType := (others =>'0');
+   signal read_fifo_data                 : DataBusType    := (others =>'0');
 
    -- Control iState machine
    type InterfaceState is (
@@ -115,11 +114,12 @@ architecture Behavioral of LogicAnalyser is
       s_write_capture2,
       s_write_capture3,
       s_lut_config,     -- Writing LUT config data
+      s_read_version,   -- Read design version
       s_read_buffer,    -- Reading SDRAM
       s_read_status     -- Reading Status values
    );
-   signal iState                        : InterfaceState := s_cmd;
-   signal nextIState                    : InterfaceState;
+   signal iState                         : InterfaceState := s_cmd;
+   signal nextIState                     : InterfaceState := s_cmd;
 
    type TriggerState is (
       t_idle,        -- Idle (not capturing)
@@ -129,16 +129,16 @@ architecture Behavioral of LogicAnalyser is
       t_complete     -- Buffer filled (not capturing)
    );
 
-   signal tState                        : TriggerState := t_idle;
-   signal nextTState                    : TriggerState;
+   signal tState                         : TriggerState := t_idle;
+   signal nextTState                     : TriggerState := t_idle;
 
-   signal save_command                  : std_logic;
-   signal clear_command                 : std_logic;
-   signal command                       : AnalyserCmdType;
+   signal save_command                   : std_logic    := '0';
+   signal clear_command                  : std_logic    := '0';
+   signal command                        : AnalyserCmdType;
 
-   signal wr_trigger_luts               : std_logic;
-   signal trigger_bus_busy              : std_logic;
-   signal triggerFound                  : std_logic;
+   signal wr_trigger_luts                : std_logic    := '0';
+   signal trigger_bus_busy               : std_logic    := '0';
+   signal triggerFound                   : std_logic    := '0';
 
 --       7        6       5      4       3       2        1       0
 --   +-------+-------+-------+-------+-------+-------+-------+-------+
@@ -147,61 +147,64 @@ architecture Behavioral of LogicAnalyser is
 --   +-------+-------+-------+-------+-------+-------+-------+-------+
 --     * self-clearing bits
 
-   signal controlRegister               : std_logic_vector(5 downto 0) := (others => '0');
-   alias  controlReg_start_acq          : std_logic        is controlRegister(0);
-   alias  controlReg_clear              : std_logic        is controlRegister(1);
-   alias  selectDivider                 : std_logic_vector is controlRegister(3 downto 2);
-   alias  selectDecade                  : std_logic_vector is controlRegister(5 downto 4);
+   signal controlRegister                : std_logic_vector(5 downto 0) := (others => '0');
+   alias  controlReg_start_acq           : std_logic        is controlRegister(0);
+   alias  controlReg_clear               : std_logic        is controlRegister(1);
+   alias  selectDivider                  : std_logic_vector is controlRegister(3 downto 2);
+   alias  selectDecade                   : std_logic_vector is controlRegister(5 downto 4);
 
-   signal sdram_wr                      : std_logic;
-   signal r_isEmpty                     : std_logic;
-   signal fifo_wr_en                    : std_logic;
-   signal sdram_wr_accepted             : std_logic;
-   signal fifo_data_in                  : SampleDataType;
-   alias  sdram_wr_data                 : SampleDataType is write_fifo_dout(SampleDataType'left downto 0);
+   signal sdram_wr                       : std_logic := '0';
+   signal r_isEmpty                      : std_logic := '0';
+   signal fifo_wr_en                     : std_logic := '0';
+   signal sdram_wr_accepted              : std_logic := '0';
+   signal fifo_data_in                   : SampleDataType := (others => '0');
+   alias  sdram_wr_data                  : SampleDataType is write_fifo_dout(SampleDataType'left downto 0);
 
-   signal data_count                    : natural range 0 to 255 := 0;
-   signal decrement_data_count          : std_logic;
-   signal load_data_count               : std_logic;
+   signal data_count                     : natural range 0 to 255 := 0;
+   signal decrement_data_count           : std_logic := '0';
+   signal load_data_count                : std_logic := '0';
 
-   signal write_control_reg             : std_logic;
+   signal write_control_reg              : std_logic := '0';
 
-   signal armed                         : std_logic;
-   signal sampling                      : std_logic;
+   signal armed                          : std_logic := '0';
+   signal sampling                       : std_logic := '0';
 
-   signal doSample                      : std_logic;
+   signal doSample                       : std_logic;
 
-   signal read_fifo_empty               : std_logic;
-   signal read_fifo_near_full           : std_logic;
-   signal read_fifo_full                : std_logic;
-   signal read_fifo_rd_en               : std_logic;
+   signal read_fifo_empty                : std_logic := '0';
+   signal read_fifo_near_full            : std_logic := '0';
+   signal read_fifo_full                 : std_logic := '0';
+   signal read_fifo_rd_en                : std_logic := '0';
 
-   signal read_sdram                    : std_logic := '0';
-   signal read_sdram1                   : std_logic := '0';
-   signal read_sdram2                   : std_logic := '0';
+   signal read_sdram                     : std_logic := '0';
+   signal read_sdram1                    : std_logic := '0';
+   signal read_sdram2                    : std_logic := '0';
 
-   attribute ASYNC_REG of read_sdram    : signal is "TRUE";
-   attribute ASYNC_REG of read_sdram1   : signal is "TRUE";
-   attribute ASYNC_REG of read_sdram2   : signal is "TRUE";
+   attribute ASYNC_REG of read_sdram     : signal is "TRUE";
+   attribute ASYNC_REG of read_sdram1    : signal is "TRUE";
+   attribute ASYNC_REG of read_sdram2    : signal is "TRUE";
 
-   signal clear_counter                 : std_logic;
-   signal clear_counter1                : std_logic;
-   signal clear_counter2                : std_logic;
+   signal clear_counter                  : std_logic := '0';
+   signal clear_counter1                 : std_logic := '0';
+   signal clear_counter2                 : std_logic := '0';
 
    attribute ASYNC_REG of clear_counter  : signal is "TRUE";
    attribute ASYNC_REG of clear_counter1 : signal is "TRUE";
    attribute ASYNC_REG of clear_counter2 : signal is "TRUE";
 
-   signal write_pretrig1_reg            : std_logic;
-   signal write_pretrig2_reg            : std_logic;
-   signal write_pretrig3_reg            : std_logic;
-   signal write_capture1_reg            : std_logic;
-   signal write_capture2_reg            : std_logic;
-   signal write_capture3_reg            : std_logic;
+   signal write_pretrig_high             : std_logic := '0';
+   signal write_pretrig_mid              : std_logic := '0';
+   signal write_pretrig_low              : std_logic := '0';
+   signal write_capture_high             : std_logic := '0';
+   signal write_capture_mid              : std_logic := '0';
+   signal write_capture_low              : std_logic := '0';
 
-   -- signal status_register : std_logic_vector(7 downto 0);
-   
 begin
+
+   -- Port shadows
+   armed_o     <= armed;
+   sampling_o  <= sampling;
+   doSample_o  <= doSample;
 
    Prescaler_inst:
    entity work.Prescaler
@@ -241,19 +244,17 @@ begin
 
    sdram_wr <= not r_isEmpty;
 
-   armed_o     <= armed;
-   sampling_o  <= sampling;
-   doSample_o  <= doSample;
-
    -- Mark sample as pre-trigger threshold
    preTrigger_sample <= '1' when (capture_counter = preTrigger_amount) else '0';
 
    -- Mark this sample as trigger sample
-   trigger_sample <= '1' when (triggerFound = '1') else '0';
+   trigger_sample    <= '1' when (triggerFound = '1') else '0';
 
-   TriggerStateMachine:
+   CaptureStateMachine:
    process(clock_100MHz)
 
+   variable next_count : sdram_AddrType;
+   
    begin
       if rising_edge(clock_100MHz) then
 
@@ -265,27 +266,27 @@ begin
             controlRegister <= host_receive_data(controlRegister'left downto controlRegister'right);
          end if;
 
-         if (write_pretrig1_reg = '1') then
+         if (write_pretrig_high = '1') then
             preTrigger_amount(preTrigger_amount'left downto 16) <= host_receive_data(preTrigger_amount'left-16 downto 0);
          end if;
 
-         if (write_pretrig2_reg = '1') then
+         if (write_pretrig_mid  = '1') then
             preTrigger_amount(15 downto 8) <= host_receive_data;
          end if;
 
-         if (write_pretrig3_reg = '1') then
+         if (write_pretrig_low  = '1') then
             preTrigger_amount(7 downto 0) <= host_receive_data;
          end if;
 
-         if (write_capture1_reg = '1') then
+         if (write_capture_high = '1') then
             capture_amount(capture_amount'left downto 16) <= host_receive_data(capture_amount'left-16 downto 0);
          end if;
 
-         if (write_capture2_reg = '1') then
+         if (write_capture_mid  = '1') then
             capture_amount(15 downto 8) <= host_receive_data;
          end if;
 
-         if (write_capture3_reg = '1') then
+         if (write_capture_low  = '1') then
             capture_amount(7 downto 0) <= host_receive_data;
          end if;
 
@@ -308,12 +309,14 @@ begin
 
                if (doSample = '1') then
                   -- Count pre-trigger capture
-                  capture_counter <= std_logic_vector(unsigned(capture_counter) + 1);
-                  if (capture_counter = preTrigger_amount) then
+                  next_count := std_logic_vector(unsigned(capture_counter) + 1);
+                  capture_counter <= next_count;
+                  if (next_count = preTrigger_amount) then
                      -- End of pre-trigger capture
                      tState <= t_armed;
                   end if;
                end if;
+
             when t_armed =>
                -- Looking for trigger while capturing data
                -- Write and read pointers are advanced to keep
@@ -531,13 +534,13 @@ begin
 
       nextIState <= iState;
 
-      write_capture1_reg         <= '0';
-      write_capture2_reg         <= '0';
-      write_capture3_reg         <= '0';
+      write_capture_high         <= '0';
+      write_capture_mid          <= '0';
+      write_capture_low          <= '0';
 
-      write_pretrig1_reg         <= '0';
-      write_pretrig2_reg         <= '0';
-      write_pretrig3_reg         <= '0';
+      write_pretrig_high         <= '0';
+      write_pretrig_mid          <= '0';
+      write_pretrig_low          <= '0';
 
       case (iState) is
          when s_cmd =>
@@ -577,6 +580,9 @@ begin
                   when ACmd_RD_STATUS =>
                      nextIState <= s_read_status;
 
+                  when ACmd_RD_VERSION =>
+                     nextIState <= s_read_version;
+
                   when others =>
                      nextIState <= s_cmd;
                end case;
@@ -596,7 +602,7 @@ begin
             host_receive_data_request <= '1';
 
             if (host_receive_data_available = '1') then
-               write_pretrig1_reg   <= '1';
+               write_pretrig_low    <= '1';
                nextIState           <= s_write_pretrig2;
             end if;
 
@@ -605,7 +611,7 @@ begin
             host_receive_data_request <= '1';
 
             if (host_receive_data_available = '1') then
-               write_pretrig2_reg   <= '1';
+               write_pretrig_mid    <= '1';
                nextIState           <= s_write_pretrig3;
             end if;
 
@@ -614,7 +620,7 @@ begin
             host_receive_data_request <= '1';
 
             if (host_receive_data_available = '1') then
-               write_pretrig3_reg   <= '1';
+               write_pretrig_high   <= '1';
                nextIState           <= s_cmd;
             end if;
 
@@ -623,7 +629,7 @@ begin
             host_receive_data_request <= '1';
 
             if (host_receive_data_available = '1') then
-               write_capture1_reg   <= '1';
+               write_capture_low    <= '1';
                nextIState           <= s_write_capture2;
             end if;
 
@@ -632,7 +638,7 @@ begin
             host_receive_data_request <= '1';
 
             if (host_receive_data_available = '1') then
-               write_capture2_reg   <= '1';
+               write_capture_mid    <= '1';
                nextIState           <= s_write_capture3;
             end if;
 
@@ -641,7 +647,7 @@ begin
             host_receive_data_request <= '1';
 
             if (host_receive_data_available = '1') then
-               write_capture3_reg   <= '1';
+               write_capture_high   <= '1';
                nextIState           <= s_cmd;
             end if;
 
@@ -660,20 +666,20 @@ begin
                   decrement_data_count <= '1';
                end if;
             end if;
-            
+
          when s_read_status =>
-         
+
 --       7        6       5      4       3       2        1       0
 --   +-------+-------+-------+-------+-------+-------+-------+-------+
---   |                               |            State              |
---   |                               |                               |
+--   |                                       |         State         |
+--   |                                       |                       |
 --   +-------+-------+-------+-------+-------+-------+-------+-------+
-            
-            host_transmit_data <= 
+
+            host_transmit_data <=
                "00000"&
                std_logic_vector(to_unsigned(TriggerState'pos(tState),3));
 
-            -- Check FT2232 is ready 
+            -- Check FT2232 is ready
             if (host_transmit_data_ready = '1') then
                -- Send data and advance FIFO
                host_transmit_data_request <= '1';
@@ -681,7 +687,26 @@ begin
                clear_command              <= '1';
             end if;
 
-         --===========================================
+
+         when s_read_version =>
+
+--       7        6       5      4       3       2        1       0
+--   +-------+-------+-------+-------+-------+-------+-------+-------+
+--   |       version                                                 |
+--   |                                                               |
+--   +-------+-------+-------+-------+-------+-------+-------+-------+
+
+            host_transmit_data <= "00000001";
+
+            -- Check FT2232 is ready
+            if (host_transmit_data_ready = '1') then
+               -- Send data and advance FIFO
+               host_transmit_data_request <= '1';
+               nextIState                 <= s_cmd;
+               clear_command              <= '1';
+            end if;
+
+         --======================================================================
          -- The read_fifo controls reading from the SDRAM
          -- It has sufficient slack to accommodate the read latency of the SDRAM
          when s_read_buffer =>

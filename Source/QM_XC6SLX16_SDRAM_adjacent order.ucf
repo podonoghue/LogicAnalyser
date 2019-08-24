@@ -9,7 +9,7 @@ TIMESPEC TS_IGNORE2 = FROM "Digitalclockmanager_inst_clk2x" TO "Digitalclockmana
 NET "clock_50MHz"       LOC = A10   | IOSTANDARD = LVTTL;  // SYS_CLK
 
 NET "armed"             LOC = T9    | IOSTANDARD = LVTTL;  // LED #1 (BANK2_IO_T9)
-NET "heartbeat"         LOC = R9    | IOSTANDARD = LVTTL;  // LED #3 (BANK2_IO_R9)
+NET "sampling"          LOC = R9    | IOSTANDARD = LVTTL;  // LED #3 (BANK2_IO_R9)
 
 #NET "sw_1"              LOC = T8    | IOSTANDARD = LVTTL;  // SW #2 (BANK2_IO_T8)
 #NET "sw_3"              LOC = R7    | IOSTANDARD = LVTTL;  // SW #3 (BANK2_IO_R7)
@@ -70,10 +70,10 @@ NET "sdram_addr[12]"    LOC = K1    | IOSTANDARD = LVTTL;  // sdram_addr[12]
 # | 5V | Gnd| I/O ........................... I/O | Gnd| 3V3| Gnd|
 # | 64 | 62 | 60 |                           | 8  |  6 |  4 |  2 |
 # +--------------------------------------------------------------+
-#
-                                                      // GND   U8-P1
-                                                      // 3V3!! U8-P3
-                                                      // GND   U8-P5
+
+# GND                                                 // GND   U8-P1
+# 3V3                                                 // 3V3!! U8-P3
+# GND                                                 // GND   U8-P5
 # NET "ft2232h_rst_n" LOC = A14 | IOSTANDARD = LVTTL; // BANK0 U8-P7
 # NET "" LOC = C13 | IOSTANDARD = LVTTL; // BANK0 U8-P9
 # NET "" LOC = B12 | IOSTANDARD = LVTTL; // BANK0 U8-P11
@@ -83,7 +83,7 @@ NET "ft2232h_rd_n"   LOC = C9  | IOSTANDARD = LVTTL; // BANK0 U8-P17
 NET "ft2232h_wr_n"   LOC = B8  | IOSTANDARD = LVTTL; // BANK0 U8-P19
 NET "ft2232h_siwu_n" LOC = C7  | IOSTANDARD = LVTTL; // BANK0 U8-P21
 # NET "" LOC = B6  | IOSTANDARD = LVTTL; // BANK0 U8-P23
-# NET "" LOC = B5  | IOSTANDARD = LVTTL; // BANK0 U8-P25
+NET "doSample" LOC = B5  | IOSTANDARD = LVTTL; // BANK0 U8-P25
 # NET "" LOC = E10 | IOSTANDARD = LVTTL; // BANK0 U8-P27
 # NET "" LOC = E11 | IOSTANDARD = LVTTL; // BANK0 U8-P29
 # NET "" LOC = F9  | IOSTANDARD = LVTTL; // BANK0 U8-P31

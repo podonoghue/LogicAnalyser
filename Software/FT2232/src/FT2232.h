@@ -23,7 +23,7 @@ public:
  *
  * @return Device handle
  */
-FT2232();
+FT2232(bool verbose = false);
 
 /**
  * Send data to FPGA through FT2232
@@ -35,7 +35,19 @@ FT2232();
  * @return true  => OK
  * @return false => Failed
  */
-bool transmitData(uint8_t data[], unsigned dataSize);
+bool transmitData(const uint8_t data[], unsigned dataSize);
+
+/**
+ * Receive data from FPGA through FT2232
+ *
+ * @param ftHandle   Device handle
+ * @param data       Data to send
+ * @param dataSize   Size of data in bytes
+ *
+ * @return true  => OK
+ * @return false => Failed
+ */
+bool receiveData(uint8_t data[], unsigned dataSize);
 
 /**
  * Destruct FT2232 device

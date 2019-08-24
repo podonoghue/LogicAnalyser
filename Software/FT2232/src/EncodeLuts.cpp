@@ -60,31 +60,31 @@ const uint16_t TriggerStep::lutEncoding[] = {
  * @param lutValues
  * @param number
  */
-void printLuts(uint32_t lutValues[], unsigned number) {
+void printLuts(const char *title, uint32_t lutValues[], unsigned number) {
    using namespace USBDM;
 
+   console.writeln(title);
+   console.write("-----------------------------------------------------------");
    bool doOpen = true;
    unsigned printNum = 0;
-   if (number>LUTS_PER_TRIGGER_STEP_FOR_PATTERNS) {
-      console.write("\n");
-   }
+   console.write("\n");
    for(unsigned index=0; index<number; index++) {
       if (doOpen) {
-         console.write("[");
+         console.write("[ ");
          doOpen = false;
+      }
+      else {
+         console.write("  ");
       }
       console.setPadding(Padding_LeadingZeroes).
             setWidth(2).write(index, Radix_16).write(":0x").setWidth(32).write(lutValues[index], Radix_2);
-      if (++printNum == LUTS_PER_TRIGGER_STEP_FOR_PATTERNS) {
+      if ((++printNum == LUTS_PER_TRIGGER_STEP_FOR_PATTERNS) or (index == (number-1))) {
          printNum = 0;
-         console.write("]\n");
+         console.writeln(" ]");
          doOpen = true;
       }
-//      else if ((printNum % LUTS_PER_COMPARATOR) ==0) {
-//         USBDM::console.write("|");
-//      }
       else {
-         console.write(", ");
+         console.writeln(", ");
       }
    }
    if (printNum != 0) {
@@ -128,7 +128,7 @@ void testTriggerToLuts(
    };
    USBDM::console.write("Tb='").write(triggerB).write("', Ta='").write(triggerA).write("' => ");
    trigger.getTriggerStepPatternMatcherLutValues(lutValues);
-   printLuts(lutValues, LUTS_PER_TRIGGER_STEP_FOR_PATTERNS);
+   printLuts("LUTS", lutValues, LUTS_PER_TRIGGER_STEP_FOR_PATTERNS);
 }
 
 void encodeTriggerToStep(

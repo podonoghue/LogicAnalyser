@@ -23,6 +23,8 @@ entity LogicAnalyserWrapper is
       -- Trigger logic
       sample         : in    SampleDataType;
       armed          : out   std_logic;
+      sampling       : out   std_logic;
+      doSample       : out   std_logic;
 
       -- SDRAM interface
       initializing   : out   std_logic;
@@ -35,9 +37,9 @@ entity LogicAnalyserWrapper is
       sdram_dqm      : out   std_logic_vector(1 downto 0);
       sdram_addr     : out   std_logic_vector(12 downto 0);
       sdram_ba       : out   std_logic_vector(1 downto 0);
-      sdram_data     : inout std_logic_vector(15 downto 0);
+      sdram_data     : inout std_logic_vector(15 downto 0)
 
-      heartbeat      : out   std_logic
+--      heartbeat      : out   std_logic
   );
 end entity;
  
@@ -47,11 +49,11 @@ signal clock_110MHz       : std_logic;
 signal clock_110MHz_n     : std_logic;
 signal clock_100MHz       : std_logic;
 
-signal heartbeatFFs       : unsigned(24 downto 0);
+--signal heartbeatFFs       : unsigned(24 downto 0);
 
 begin
-   heartbeat    <= heartbeatFFs(heartbeatFFs'left);
-   heartbeatFFs <= (heartbeatFFs + 1) when rising_edge(clock_100MHz);
+--   heartbeat    <= heartbeatFFs(heartbeatFFs'left);
+--   heartbeatFFs <= (heartbeatFFs + 1) when rising_edge(clock_100MHz);
 
    LogicAnalyser_inst :
    entity work.LogicAnalyser
@@ -70,8 +72,9 @@ begin
       -- Trigger logic 
       sample         => sample,       
       armed_o        => armed,      
-      sampling_o     => open,
-
+      sampling_o     => sampling,
+      doSample_o     => doSample,
+      
       -- SDRAM Interface
       initializing => initializing,
       sdram_clk    => sdram_clk,   

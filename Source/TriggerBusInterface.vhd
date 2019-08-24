@@ -18,7 +18,6 @@ entity TriggerBusInterface is
       busy           : out  std_logic;
       
       -- LUT serial configuration          
-      lut_clock      : out std_logic;  -- Used to clock LUT chain
       lut_config_ce  : out std_logic;  -- Clock enable for LUT shift register
       lut_config_in  : out std_logic;  -- Serial in for LUT shift register (MSB first)
       lut_config_out : in  std_logic   -- Serial out for LUT shift register
@@ -34,7 +33,6 @@ signal bitCount          : integer range 0 to DataBusType'length-1;
 signal dataShiftRegister : DataBusType := (others => '0');
 
 begin
-   lut_clock     <= clock;
    lut_config_in <= dataShiftRegister(dataShiftRegister'left);
       
    ReadProc:
@@ -51,7 +49,6 @@ begin
    begin
       if rising_edge(clock) then
          -- Default to busy
-         
          case (state) is
             when s_idle =>
                busy           <= '0';
@@ -59,7 +56,7 @@ begin
                if (wr = '1') then
                   state             <= s_write;
                   dataShiftRegister <= dataIn;
-                  lut_config_ce     <= '1';
+                  lut_config_ce     <= '1';-- after 10 ps;
                   bitCount          <= 0;
                   busy              <= '1';
                end if;
@@ -69,7 +66,7 @@ begin
                if (bitCount = dataShiftRegister'left) then
                   state         <= s_idle;
                   busy          <= '0';
-                  lut_config_ce <= '0';
+                  lut_config_ce <= '0';-- after 10 ps;
                else
                   bitCount <= bitCount + 1;
                end if;

@@ -17,6 +17,86 @@
 #include "Lfsr16.h"
 
 namespace Analyser {
+//==============================================================
+//
+constexpr uint8_t C_RECEIVE_MODE  = 0b00000000;
+constexpr uint8_t C_TRANSMIT_MODE = 0b10000000;
+constexpr uint8_t C_TX_BITNUM     = 7;
+
+constexpr uint8_t C_NOP           = 0b00000000 | C_RECEIVE_MODE;
+
+constexpr uint8_t C_LUT_CONFIG    = 0b00000001 | C_RECEIVE_MODE;
+constexpr uint8_t C_WR_CONTROL    = 0b00000010 | C_RECEIVE_MODE;
+constexpr uint8_t C_WR_PRETRIG    = 0b00000011 | C_RECEIVE_MODE;
+constexpr uint8_t C_WR_CAPTURE    = 0b00000100 | C_RECEIVE_MODE;
+
+constexpr uint8_t C_RD_VERSION    = 0b00000000 | C_TRANSMIT_MODE;
+constexpr uint8_t C_RD_BUFFER     = 0b00000001 | C_TRANSMIT_MODE;
+constexpr uint8_t C_RD_STATUS     = 0b00000010 | C_TRANSMIT_MODE;
+
+//==============================================================
+//
+constexpr uint8_t C_CONTROL_START_ACQ     = 0b00000001;
+constexpr uint8_t C_CONTROL_CLEAR         = 0b00000010;
+
+constexpr uint8_t C_CONTROL_DIV_MASK      = 0b00001100;
+constexpr uint8_t C_CONTROL_DIV_OFFSET    = 2;
+constexpr uint8_t C_CONTROL_DIV1          = 0b00000000;
+constexpr uint8_t C_CONTROL_DIV2          = 0b00000100;
+constexpr uint8_t C_CONTROL_DIV5          = 0b00001000;
+constexpr uint8_t C_CONTROL_DIV10         = 0b00001100;
+
+constexpr uint8_t C_CONTROL_DIVx_MASK     = 0b00110000;
+constexpr uint8_t C_CONTROL_DIVx_OFFSET   = 4;
+constexpr uint8_t C_CONTROL_DIVx1         = 0b00000000;
+constexpr uint8_t C_CONTROL_DIVx10        = 0b00010000;
+constexpr uint8_t C_CONTROL_DIVx100       = 0b00100000;
+constexpr uint8_t C_CONTROL_DIVx1000      = 0b00110000;
+
+enum SampleRate {
+   SampleRate_10ns  = C_CONTROL_DIVx1    | C_CONTROL_DIV1,
+   SampleRate_20ns  = C_CONTROL_DIVx1    | C_CONTROL_DIV2,
+   SampleRate_50ns  = C_CONTROL_DIVx1    | C_CONTROL_DIV5,
+   SampleRate_100ns = C_CONTROL_DIVx10   | C_CONTROL_DIV1,
+   SampleRate_200ns = C_CONTROL_DIVx10   | C_CONTROL_DIV2,
+   SampleRate_500ns = C_CONTROL_DIVx10   | C_CONTROL_DIV5,
+   SampleRate_1us   = C_CONTROL_DIVx100  | C_CONTROL_DIV1,
+   SampleRate_2us   = C_CONTROL_DIVx100  | C_CONTROL_DIV2,
+   SampleRate_5us   = C_CONTROL_DIVx100  | C_CONTROL_DIV5,
+   SampleRate_10us  = C_CONTROL_DIVx1000 | C_CONTROL_DIV1,
+   SampleRate_20us  = C_CONTROL_DIVx1000 | C_CONTROL_DIV2,
+   SampleRate_50us  = C_CONTROL_DIVx1000 | C_CONTROL_DIV5,
+   SampleRate_100us = C_CONTROL_DIVx1000 | C_CONTROL_DIV10,
+};
+
+static constexpr unsigned getSamplePeriodIn_nanoseconds(SampleRate sampleRate) {
+   switch (sampleRate) {
+      case SampleRate_10ns  : return 10;
+      case SampleRate_20ns  : return 20;
+      case SampleRate_50ns  : return 50;
+      case SampleRate_100ns : return 100;
+      case SampleRate_200ns : return 200;
+      case SampleRate_500ns : return 500;
+      case SampleRate_1us   : return 1000;
+      case SampleRate_2us   : return 2000;
+      case SampleRate_5us   : return 5000;
+      case SampleRate_10us  : return 10000;
+      case SampleRate_20us  : return 20000;
+      case SampleRate_50us  : return 50000;
+      case SampleRate_100us : return 100000;
+   }
+   return 1;
+}
+
+//==============================================================
+//
+constexpr uint8_t C_STATUS_STATE_MASK      = 0b00000111;
+constexpr uint8_t C_STATUS_STATE_OFFSET    = 0;
+constexpr uint8_t C_STATUS_STATE_IDLE      = 0b00000000;
+constexpr uint8_t C_STATUS_STATE_PRETRIG   = 0b00000001;
+constexpr uint8_t C_STATUS_STATE_ARMED     = 0b00000010;
+constexpr uint8_t C_STATUS_STATE_RUN       = 0b00000011;
+constexpr uint8_t C_STATUS_STATE_DONE      = 0b00000100;
 
 /**
  * Used to encode the operation to combine trigger patterns
@@ -340,12 +420,12 @@ public:
    const char *toString() {
       static USBDM::StringFormatter_T<200> sf;
       sf.clear();
-      sf.write(operation.toString()).write(" ");
+      sf.write(operation.toString()).write("(");
       for (unsigned triggerNum=0; triggerNum<MAX_TRIGGER_PATTERNS; triggerNum++) {
          sf.write("T").write(triggerNum).write("[").write(patterns[triggerNum].toString());
          sf.write(", ").write(polarities[triggerNum].toString()).write("] ");
       }
-      sf.write("Count = ").write(triggerCount);
+      sf.write("), Count = ").write(triggerCount);
       return sf.toString();
    }
 
@@ -451,12 +531,48 @@ class TriggerSetup {
    // Number of last active trigger
    unsigned lastActiveTriggerCount;
 
+   SampleRate sampleRate;
+
+   unsigned   sampleSize;
+   unsigned   preTriggerSize;
+
 public:
-   TriggerSetup() : lastActiveTriggerCount(0) {
+   TriggerSetup() : lastActiveTriggerCount(0), sampleRate(SampleRate_100ns), sampleSize(100), preTriggerSize(50) {
    }
 
-   TriggerSetup(TriggerStep triggers[MAX_TRIGGER_STEPS], unsigned lastActiveTriggerCount) : lastActiveTriggerCount(lastActiveTriggerCount) {
+   TriggerSetup(
+         TriggerStep triggers[MAX_TRIGGER_STEPS],
+         unsigned    lastActiveTriggerCount,
+         SampleRate  sampleRate,
+         unsigned    sampleSize,
+         unsigned    preTriggerSize)
+
+      : lastActiveTriggerCount(lastActiveTriggerCount), sampleRate(sampleRate), sampleSize(sampleSize), preTriggerSize(preTriggerSize) {
       memcpy(this->triggers, triggers, sizeof(this->triggers));
+   }
+
+   void setSampleRate(SampleRate sampleRate) {
+      this->sampleRate = sampleRate;
+   }
+
+   SampleRate getSampleRate() {
+      return sampleRate;
+   }
+
+   void setSampleSize(unsigned sampleSize) {
+      this->sampleSize = sampleSize;
+   }
+
+   unsigned getSampleSize() {
+      return sampleSize;
+   }
+
+   void setPreTrigSize(unsigned preTriggerSize) {
+      this->preTriggerSize = preTriggerSize;
+   }
+
+   unsigned getPreTrigSize() {
+      return preTriggerSize;
    }
 
    auto getTrigger(unsigned triggerNum) {
@@ -468,8 +584,8 @@ public:
    }
 
    void printTriggers() {
-      for (unsigned step=0; step<MAX_TRIGGER_STEPS; step++) {
-         USBDM::console.write("  -- ").writeln(triggers[step].toString());
+      for (unsigned step=0; step<=lastActiveTriggerCount; step++) {
+         USBDM::console.write("-- ").writeln(triggers[step].toString());
       }
    }
 
@@ -494,12 +610,20 @@ public:
     * @param trigger
     * @param lutValues
     */
-   void getTriggerPatternMatcherLutValues(uint32_t lutValues[LUTS_FOR_TRIGGER_PATTERNS]) {
+   void getTriggerPatternMatcherLutValues(uint32_t *&lutValues) {
       unsigned lutIndex = 0;
       for(int step=MAX_TRIGGER_STEPS-1; step >=0; step-- ) {
-         triggers[step].getTriggerStepPatternMatcherLutValues(lutValues+lutIndex);
+         if (step>(int)this->lastActiveTriggerCount) {
+            for (unsigned offset=0; offset<LUTS_PER_TRIGGER_STEP_FOR_PATTERNS; offset++) {
+               lutValues[lutIndex+offset] = 0x0;
+            }
+         }
+         else {
+            triggers[step].getTriggerStepPatternMatcherLutValues(lutValues+lutIndex);
+         }
          lutIndex += LUTS_PER_TRIGGER_STEP_FOR_PATTERNS;
       }
+      lutValues += LUTS_FOR_TRIGGER_PATTERNS;
    }
 
    /**
@@ -508,12 +632,20 @@ public:
     * @param trigger
     * @param lutValues
     */
-   void getTriggerCombinerLutValues(uint32_t lutValues[LUTS_FOR_TRIGGER_COMBINERS]) {
+   void getTriggerCombinerLutValues(uint32_t *&lutValues) {
       unsigned lutIndex = 0;
       for(int step=MAX_TRIGGER_STEPS-1; step >=0; step-- ) {
-         triggers[step].getTriggerStepCombinerLutValues(lutValues+lutIndex);
+         if (step>(int)this->lastActiveTriggerCount) {
+            for (unsigned offset=0; offset<LUTS_PER_TRIGGER_STEP_FOR_COMBINERS; offset++) {
+               lutValues[lutIndex+offset] = 0x0;
+            }
+         }
+         else {
+            triggers[step].getTriggerStepCombinerLutValues(lutValues+lutIndex);
+         }
          lutIndex += LUTS_PER_TRIGGER_STEP_FOR_COMBINERS;
       }
+      lutValues += LUTS_FOR_TRIGGER_COMBINERS;
    }
 
    /**
@@ -522,8 +654,7 @@ public:
     * @param trigger
     * @param lutValues
     */
-   void getTriggerFlagLutValues(uint32_t lutValues[LUTS_FOR_TRIGGERS_FLAGS]) {
-      unsigned lutIndex = 0;
+   void getTriggerFlagLutValues(uint32_t *&lutValues) {
       uint32_t flags = 0;
       // Process each trigger
       for(int step=0; step < MAX_TRIGGER_STEPS; step++ ) {
@@ -531,8 +662,8 @@ public:
             flags |= (1<<step);
          }
       }
-      lutValues[lutIndex++] = (1<<lastActiveTriggerCount);
-      lutValues[lutIndex++] = flags;
+      *lutValues++ = (1<<lastActiveTriggerCount);
+      *lutValues++ = flags;
    }
 
    /**
@@ -541,7 +672,7 @@ public:
     * @param trigger
     * @param lutValues
     */
-   void getTriggerCountLutValues(uint32_t lutValues[LUTS_FOR_TRIGGER_COUNTS]) {
+   void getTriggerCountLutValues(uint32_t *&lutValues) {
 
       // Clear LUTs initially
       for(int index=0; index<LUTS_FOR_TRIGGER_COUNTS; index++) {
@@ -549,7 +680,7 @@ public:
       }
       // Shuffle Trigger values for LUTS
       // This is basically a transpose
-      for(int step=0; step < MAX_TRIGGER_STEPS; step++ ) {
+      for(int step=0; step <= (int)lastActiveTriggerCount; step++ ) {
          // The bits for each step appear at the this location in the SR
          uint32_t bitmask = 1<<step;
          uint32_t count   = Lfsr16::encode(getTrigger(step).getCount());
@@ -557,6 +688,7 @@ public:
             lutValues[(NUM_MATCH_COUNTER_BITS-1)-bit] |= (count&(1<<bit))?bitmask:0;
          }
       }
+      lutValues += LUTS_FOR_TRIGGER_COUNTS;
    }
 
 };
@@ -567,7 +699,7 @@ public:
  * @param lutValues
  * @param number
  */
-void printLuts(uint32_t lutValues[], unsigned number);
+void printLuts(const char *title, uint32_t lutValues[], unsigned number);
 
 }  // end namespace Analyser
 

@@ -109,6 +109,7 @@ package LogicAnalyserPackage is
    constant C_WR_PRETRIG    : DataBusType := "00000011" or C_RECEIVE_MODE;
    constant C_WR_CAPTURE    : DataBusType := "00000100" or C_RECEIVE_MODE;
 
+   constant C_RD_VERSION    : DataBusType := "00000000" or C_TRANSMIT_MODE;
    constant C_RD_BUFFER     : DataBusType := "00000001" or C_TRANSMIT_MODE;
    constant C_RD_STATUS     : DataBusType := "00000010" or C_TRANSMIT_MODE;
 
@@ -119,7 +120,8 @@ package LogicAnalyserPackage is
       ACmd_RD_BUFFER, 
       ACmd_WR_PRETRIG, 
       ACmd_WR_CAPTURE, 
-      ACmd_RD_STATUS
+      ACmd_RD_STATUS,
+      ACmd_RD_VERSION
    );
 
    --==============================================================
@@ -173,6 +175,7 @@ package body LogicAnalyserPackage is
          when C_WR_CAPTURE => return ACmd_WR_CAPTURE;
          when C_RD_BUFFER  => return ACmd_RD_BUFFER;
          when C_RD_STATUS  => return ACmd_RD_STATUS;
+         when C_RD_VERSION => return ACmd_RD_VERSION;
          when others       => return ACmd_NOP;
       end case;
    end function;

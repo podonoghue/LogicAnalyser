@@ -1,2 +1,2 @@
-# FT2232
-Simple test of FT2232 chip.
+# Logic Analyser Interface
+Logic Analyser interface software using FT2232

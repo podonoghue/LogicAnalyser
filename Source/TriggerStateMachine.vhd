@@ -83,7 +83,7 @@ begin
                      end if;
                   else
                      if (contiguousTrigger = '1') then
-                        -- Counter cleared on break in matches
+                        -- Counter cleared on failed match
                         matchCounter <= (0=>'1', others =>'0');
                      end if;
                   end if;
