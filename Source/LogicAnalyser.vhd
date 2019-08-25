@@ -106,16 +106,15 @@ architecture Behavioral of LogicAnalyser is
    type InterfaceState is (
       s_cmd,            -- Waiting for command value
       s_size,           -- Getting size of read/write
-      s_write_control,  -- Writng control register
-      s_write_pretrig1, -- Writing 24-bit pre-trig value
-      s_write_pretrig2,
+      s_write_pretrig2, -- Writing 24-bit pre-trig value
       s_write_pretrig3,
-      s_write_capture1, -- Writing 24-bit capture value
-      s_write_capture2,
+      s_write_capture2, -- Writing 24-bit capture value
       s_write_capture3,
-      s_lut_config,     -- Writing LUT config data
+      s_load_luts1,     -- Writing LUT config data
+      s_load_luts2, 
       s_read_version,   -- Read design version
-      s_read_buffer,    -- Reading SDRAM
+      s_read_buffer1,   -- Reading SDRAM
+      s_read_buffer2,
       s_read_status     -- Reading Status values
    );
    signal iState                         : InterfaceState := s_cmd;
@@ -160,9 +159,10 @@ architecture Behavioral of LogicAnalyser is
    signal fifo_data_in                   : SampleDataType := (others => '0');
    alias  sdram_wr_data                  : SampleDataType is write_fifo_dout(SampleDataType'left downto 0);
 
-   signal data_count                     : natural range 0 to 255 := 0;
+   signal data_count                     : unsigned(15 downto 0);
    signal decrement_data_count           : std_logic := '0';
-   signal load_data_count                : std_logic := '0';
+   signal write_data_count            : std_logic := '0';
+   signal write_data_count_high           : std_logic := '0';
 
    signal write_control_reg              : std_logic := '0';
 
@@ -244,9 +244,6 @@ begin
 
    sdram_wr <= not r_isEmpty;
 
-   -- Mark sample as pre-trigger threshold
-   preTrigger_sample <= '1' when (capture_counter = preTrigger_amount) else '0';
-
    -- Mark this sample as trigger sample
    trigger_sample    <= '1' when (triggerFound = '1') else '0';
 
@@ -258,9 +255,9 @@ begin
    begin
       if rising_edge(clock_100MHz) then
 
-         clear_counter  <= '0';
-         sampling       <= '0';
-         armed          <= '0';
+         clear_counter     <= '0';
+         sampling          <= '0';
+         armed             <= '0';
 
          if (write_control_reg = '1') then
             controlRegister <= host_receive_data(controlRegister'left downto controlRegister'right);
@@ -314,6 +311,8 @@ begin
                   if (next_count = preTrigger_amount) then
                      -- End of pre-trigger capture
                      tState <= t_armed;
+                     -- Mark sample as pre-trigger threshold
+                     preTrigger_sample <= '1';
                   end if;
                end if;
 
@@ -325,6 +324,8 @@ begin
                armed     <= '1';
                sampling  <= '1';
                if (doSample = '1') then
+                  -- No longer pre-trigger threshold
+                  preTrigger_sample <= '0';
                   if (triggerFound = '1') then
                      -- Found trigger
                      tState <= t_running;
@@ -486,8 +487,11 @@ begin
    begin
       if rising_edge(clock_100MHz) then
          iState <= nextIState;
-         if (load_data_count = '1') then
-            data_count <= to_integer(unsigned(host_receive_data));
+         if (write_data_count = '1') then
+            data_count(15 downto 8) <= (others => '0');
+            data_count( 7 downto 0) <= unsigned(host_receive_data);
+         elsif (write_data_count_high = '1') then
+            data_count(15 downto 8) <= unsigned(host_receive_data);
          elsif (decrement_data_count = '1') then
             data_count <= data_count-1;
          end if;
@@ -510,6 +514,14 @@ begin
       data_count
    )
 
+--   wr_control     >value
+--   wr_pretrigSize >value_low >value_mid >value_high 
+--   wr_catureSize  >value_low >value_mid >value_high 
+--   wr_load_luts   >size_low  >size_high >values...
+--   rd_buffer      >size_low  >size_high <values...
+--   rd_status      >--------  <value
+--   rd_version     >--------  <value
+
    begin
       -- Default to not accept new data
       host_receive_data_request  <= '0';
@@ -521,7 +533,8 @@ begin
       -- Default connect data from read_fifo to FT2232
       host_transmit_data         <= read_fifo_data;
 
-      load_data_count            <= '0';
+      write_data_count_high       <= '0';
+      write_data_count        <= '0';
       decrement_data_count       <= '0';
 
       save_command               <= '0';
@@ -543,6 +556,7 @@ begin
       write_pretrig_low          <= '0';
 
       case (iState) is
+         --======================================================================
          when s_cmd =>
             -- Available to accept commands from host
             host_receive_data_request <= '1';
@@ -555,27 +569,33 @@ begin
                clear_command <= '1';
             end if;
 
+         --======================================================================
          when s_size =>
             -- Available to accept command size from host
             host_receive_data_request <= '1';
 
             if (host_receive_data_available = '1') then
-               load_data_count <= '1';
                case (command) is
-                  when ACmd_LUT_CONFIG =>
-                     nextIState <= s_lut_config;
+                  when ACmd_LOAD_LUTS =>
+                     write_data_count   <= '1';
+                     nextIState         <= s_load_luts1;
 
                   when ACmd_WR_CONTROL =>
-                     nextIState <= s_write_control;
+                     write_control_reg  <= '1';
+                     clear_command      <= '1';
+                     nextIState         <= s_cmd;
 
                   when ACmd_WR_PRETRIG =>
-                     nextIState <= s_write_pretrig1;
+                     write_pretrig_low  <= '1';
+                     nextIState         <= s_write_pretrig2;
 
                   when ACmd_WR_CAPTURE =>
-                     nextIState <= s_write_capture1;
+                     write_capture_low  <= '1';
+                     nextIState         <= s_write_capture2;
 
                   when ACmd_RD_BUFFER =>
-                     nextIState <= s_read_buffer;
+                     write_data_count   <= '1';
+                     nextIState         <= s_read_buffer1;
 
                   when ACmd_RD_STATUS =>
                      nextIState <= s_read_status;
@@ -584,28 +604,12 @@ begin
                      nextIState <= s_read_version;
 
                   when others =>
+                     clear_command <= '1';
                      nextIState <= s_cmd;
                end case;
             end if;
 
-         when s_write_control =>
-            -- Available to accept control register value from host
-            host_receive_data_request <= '1';
-
-            if (host_receive_data_available = '1') then
-               write_control_reg  <= '1';
-               nextIState         <= s_cmd;
-            end if;
-
-         when s_write_pretrig1 =>
-            -- Available to accept pretrig register value from host
-            host_receive_data_request <= '1';
-
-            if (host_receive_data_available = '1') then
-               write_pretrig_low    <= '1';
-               nextIState           <= s_write_pretrig2;
-            end if;
-
+         --======================================================================
          when s_write_pretrig2 =>
             -- Available to accept pretrig register value from host
             host_receive_data_request <= '1';
@@ -624,15 +628,7 @@ begin
                nextIState           <= s_cmd;
             end if;
 
-         when s_write_capture1 =>
-            -- Available to accept capture register value from host
-            host_receive_data_request <= '1';
-
-            if (host_receive_data_available = '1') then
-               write_capture_low    <= '1';
-               nextIState           <= s_write_capture2;
-            end if;
-
+         --======================================================================
          when s_write_capture2 =>
             -- Available to accept capture register value from host
             host_receive_data_request <= '1';
@@ -651,7 +647,17 @@ begin
                nextIState           <= s_cmd;
             end if;
 
-         when s_lut_config =>
+         --================================================================
+         when s_load_luts1 =>
+            -- Available to accept count high value from host
+            host_receive_data_request <= '1';
+
+            if (host_receive_data_available = '1') then
+               write_data_count_high <= '1';
+               nextIState            <= s_load_luts2;
+            end if;
+         
+         when s_load_luts2 =>
             -- Throttle host
             host_receive_data_request  <= not trigger_bus_busy;
 
@@ -667,6 +673,7 @@ begin
                end if;
             end if;
 
+         --================================================================
          when s_read_status =>
 
 --       7        6       5      4       3       2        1       0
@@ -687,7 +694,7 @@ begin
                clear_command              <= '1';
             end if;
 
-
+         --================================================================
          when s_read_version =>
 
 --       7        6       5      4       3       2        1       0
@@ -696,7 +703,7 @@ begin
 --   |                                                               |
 --   +-------+-------+-------+-------+-------+-------+-------+-------+
 
-            host_transmit_data <= "00000001";
+            host_transmit_data <= "00000010";
 
             -- Check FT2232 is ready
             if (host_transmit_data_ready = '1') then
@@ -706,11 +713,19 @@ begin
                clear_command              <= '1';
             end if;
 
-         --======================================================================
+         --================================================================
+         when s_read_buffer1 =>
+            -- Available to accept count high value from host
+            host_receive_data_request <= '1';
+
+            if (host_receive_data_available = '1') then
+               write_data_count_high <= '1';
+               nextIState            <= s_read_buffer2;
+            end if;
+
          -- The read_fifo controls reading from the SDRAM
          -- It has sufficient slack to accommodate the read latency of the SDRAM
-         when s_read_buffer =>
-
+         when s_read_buffer2 =>
             -- Tell SDRAM we want data (throttled by read_fifo)
             read_sdram <= '1';
 
@@ -726,7 +741,7 @@ begin
                   clear_command           <= '1';
                else
                   -- More bytes to do
-                  nextIState              <= s_read_buffer;
+                  nextIState              <= s_read_buffer2;
                   decrement_data_count    <= '1';
                end if;
             end if;

@@ -7,7 +7,7 @@
     "Horizontal trigger position": "0",
     "Max Height": "1X",
     "Operation Mode": "Buffer Mode",
-    "Sample count": "100000",
+    "Sample count": "20000000",
     "Sample rate": "100000000",
     "Stop Options": "Upload captured data",
     "Threshold Level": 1,
@@ -24,7 +24,7 @@
             "colour": "#969696",
             "enabled": true,
             "index": 0,
-            "name": "D0",
+            "name": "rxf_n",
             "strigger": 0,
             "type": 10000
         },
@@ -32,7 +32,7 @@
             "colour": "#969696",
             "enabled": true,
             "index": 1,
-            "name": "D1",
+            "name": "txe_n",
             "strigger": 0,
             "type": 10000
         },
@@ -40,7 +40,7 @@
             "colour": "#969696",
             "enabled": true,
             "index": 2,
-            "name": "D2",
+            "name": "rd_n",
             "strigger": 0,
             "type": 10000
         },
@@ -48,6 +48,38 @@
             "colour": "#969696",
             "enabled": true,
             "index": 3,
+            "name": "wr_n",
+            "strigger": 0,
+            "type": 10000
+        },
+        {
+            "colour": "#969696",
+            "enabled": true,
+            "index": 8,
+            "name": "D0",
+            "strigger": 0,
+            "type": 10000
+        },
+        {
+            "colour": "#969696",
+            "enabled": true,
+            "index": 9,
+            "name": "D1",
+            "strigger": 0,
+            "type": 10000
+        },
+        {
+            "colour": "#969696",
+            "enabled": true,
+            "index": 10,
+            "name": "D2",
+            "strigger": 0,
+            "type": 10000
+        },
+        {
+            "colour": "#969696",
+            "enabled": true,
+            "index": 11,
             "name": "D3",
             "strigger": 0,
             "type": 10000
@@ -55,23 +87,7 @@
         {
             "colour": "#969696",
             "enabled": true,
-            "index": 4,
-            "name": "D5",
-            "strigger": 0,
-            "type": 10000
-        },
-        {
-            "colour": "#969696",
-            "enabled": true,
-            "index": 5,
-            "name": "D6",
-            "strigger": 0,
-            "type": 10000
-        },
-        {
-            "colour": "#969696",
-            "enabled": true,
-            "index": 6,
+            "index": 12,
             "name": "D4",
             "strigger": 0,
             "type": 10000
@@ -79,24 +95,8 @@
         {
             "colour": "#969696",
             "enabled": true,
-            "index": 7,
-            "name": "D7",
-            "strigger": 0,
-            "type": 10000
-        },
-        {
-            "colour": "#969696",
-            "enabled": true,
-            "index": 12,
-            "name": "RXF#",
-            "strigger": 3,
-            "type": 10000
-        },
-        {
-            "colour": "#969696",
-            "enabled": true,
             "index": 13,
-            "name": "TXE#",
+            "name": "D5",
             "strigger": 0,
             "type": 10000
         },
@@ -104,7 +104,7 @@
             "colour": "#969696",
             "enabled": true,
             "index": 14,
-            "name": "RD#",
+            "name": "D6",
             "strigger": 0,
             "type": 10000
         },
@@ -112,7 +112,7 @@
             "colour": "#969696",
             "enabled": true,
             "index": 15,
-            "name": "WR#",
+            "name": "D7",
             "strigger": 0,
             "type": 10000
         }
@@ -121,31 +121,74 @@
         {
             "channel": [
                 {
-                    "d3": 3
+                    "d0": 8
                 },
                 {
-                    "clk": 14
+                    "d1": 9
                 },
                 {
-                    "d4": 4
+                    "clk": 2
                 },
                 {
-                    "d0": 0
+                    "d2": 10
                 },
                 {
-                    "d5": 5
+                    "d7": 15
                 },
                 {
-                    "d2": 2
+                    "d6": 14
                 },
                 {
-                    "d7": 7
+                    "d3": 11
                 },
                 {
-                    "d6": 6
+                    "d5": 13
                 },
                 {
-                    "d1": 1
+                    "d4": 12
+                }
+            ],
+            "id": "parallel",
+            "options": {
+                "clock_edge": "rising",
+                "endianness": "big",
+                "wordsize": 0
+            },
+            "show": {
+                "Parallel": true,
+                "parallel": true
+            },
+            "stacked decoders": [
+            ]
+        },
+        {
+            "channel": [
+                {
+                    "d0": 8
+                },
+                {
+                    "d1": 9
+                },
+                {
+                    "clk": 3
+                },
+                {
+                    "d2": 10
+                },
+                {
+                    "d7": 15
+                },
+                {
+                    "d6": 14
+                },
+                {
+                    "d3": 11
+                },
+                {
+                    "d5": 13
+                },
+                {
+                    "d4": 12
                 }
             ],
             "id": "parallel",
@@ -163,7 +206,7 @@
         }
     ],
     "trigger": {
-        "advTriggerMode": false,
+        "advTriggerMode": true,
         "serialTriggerBits": 0,
         "serialTriggerChannel": 0,
         "serialTriggerClock": "X X X X X X X X X X X X X X X X",
@@ -234,7 +277,7 @@
         "stageTriggerInv17": 0,
         "stageTriggerInv18": 0,
         "stageTriggerInv19": 0,
-        "stageTriggerLogic0": 1,
+        "stageTriggerLogic0": 0,
         "stageTriggerLogic1": 1,
         "stageTriggerLogic10": 1,
         "stageTriggerLogic11": 1,
@@ -250,7 +293,7 @@
         "stageTriggerLogic7": 1,
         "stageTriggerLogic8": 1,
         "stageTriggerLogic9": 1,
-        "stageTriggerValue00": "X X X X X X X X X X X X X X X X",
+        "stageTriggerValue00": "X X X X X X X X X X X X X F X X",
         "stageTriggerValue01": "X X X X X X X X X X X X X X X X",
         "stageTriggerValue010": "X X X X X X X X X X X X X X X X",
         "stageTriggerValue011": "X X X X X X X X X X X X X X X X",
@@ -266,7 +309,7 @@
         "stageTriggerValue07": "X X X X X X X X X X X X X X X X",
         "stageTriggerValue08": "X X X X X X X X X X X X X X X X",
         "stageTriggerValue09": "X X X X X X X X X X X X X X X X",
-        "stageTriggerValue10": "X X X X X X X X X X X X X X X X",
+        "stageTriggerValue10": "X X X X X X X X X X X X F X X X",
         "stageTriggerValue11": "X X X X X X X X X X X X X X X X",
         "stageTriggerValue110": "X X X X X X X X X X X X X X X X",
         "stageTriggerValue111": "X X X X X X X X X X X X X X X X",

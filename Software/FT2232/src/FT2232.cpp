@@ -71,6 +71,9 @@ FT2232::FT2232(bool verbose) {
       printf("FT_SetTimeouts() failed\n");
       throw MyException("FT_SetTimeouts() failed");
    }
+
+   purge();
+
    return;
 }
 
@@ -97,7 +100,7 @@ FT2232::~FT2232() {
  * @return true  => OK
  * @return false => Failed
  */
-bool FT2232::transmitData(const uint8_t data[], unsigned dataSize) {
+void FT2232::transmitData(const uint8_t data[], unsigned dataSize) {
    FT_STATUS ftStatus;
    //   unsigned long rxQueueBytes, txQueueBytes, status;
    //   ftStatus = FT_GetStatus(handle,&rxQueueBytes, &txQueueBytes, &status);
@@ -135,7 +138,6 @@ bool FT2232::transmitData(const uint8_t data[], unsigned dataSize) {
          throw MyException("FT_Write() failed");
       }
    }
-   return true;
 }
 
 /**
@@ -148,7 +150,7 @@ bool FT2232::transmitData(const uint8_t data[], unsigned dataSize) {
  * @return true  => OK
  * @return false => Failed
  */
-bool FT2232::receiveData(uint8_t data[], unsigned dataSize) {
+void FT2232::receiveData(uint8_t data[], unsigned dataSize) {
    FT_STATUS ftStatus;
 
    //   unsigned long rxQueueBytes, txQueueBytes, status;
@@ -187,5 +189,4 @@ bool FT2232::receiveData(uint8_t data[], unsigned dataSize) {
          throw MyException("FT_Read() failed");
       }
    }
-   return true;
 }

@@ -115,7 +115,7 @@ package LogicAnalyserPackage is
 
    type AnalyserCmdType is (
       ACmd_NOP, 
-      ACmd_LUT_CONFIG, 
+      ACmd_LOAD_LUTS, 
       ACmd_WR_CONTROL, 
       ACmd_RD_BUFFER, 
       ACmd_WR_PRETRIG, 
@@ -169,7 +169,7 @@ package body LogicAnalyserPackage is
    begin
       case (command) is
          when C_NOP        => return ACmd_NOP;
-         when C_LUT_CONFIG => return ACmd_LUT_CONFIG;
+         when C_LUT_CONFIG => return ACmd_LOAD_LUTS;
          when C_WR_CONTROL => return ACmd_WR_CONTROL;
          when C_WR_PRETRIG => return ACmd_WR_PRETRIG;
          when C_WR_CAPTURE => return ACmd_WR_CAPTURE;

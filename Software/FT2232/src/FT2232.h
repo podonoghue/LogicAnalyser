@@ -35,7 +35,7 @@ FT2232(bool verbose = false);
  * @return true  => OK
  * @return false => Failed
  */
-bool transmitData(const uint8_t data[], unsigned dataSize);
+void transmitData(const uint8_t data[], unsigned dataSize);
 
 /**
  * Receive data from FPGA through FT2232
@@ -47,7 +47,28 @@ bool transmitData(const uint8_t data[], unsigned dataSize);
  * @return true  => OK
  * @return false => Failed
  */
-bool receiveData(uint8_t data[], unsigned dataSize);
+void receiveData(uint8_t data[], unsigned dataSize);
+
+/**
+ * Purge receive data buffer
+ */
+void purgeRx() {
+   FT_Purge(handle, FT_PURGE_RX);
+}
+
+/**
+ * Purge transmit data buffer
+ */
+void purgeTx() {
+   FT_Purge(handle, FT_PURGE_TX);
+}
+
+/**
+ * Purge receive and transmit data buffer
+ */
+void purge() {
+   FT_Purge(handle, FT_PURGE_RX|FT_PURGE_TX);
+}
 
 /**
  * Destruct FT2232 device

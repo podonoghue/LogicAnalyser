@@ -19,54 +19,54 @@
 
 using namespace Analyser;
 
-TriggerStep triggersImmediate[MAX_TRIGGER_STEPS] = {
-      // Pattern 0 Pattern 1      Polarity 0          Polarity 1          Count
-      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And, false, 0},
+TriggerStep trigger0x7FFFor0x7FFE[MAX_TRIGGER_STEPS] = {
+      //   Pattern 0              Pattern 1            Polarity 0            Polarity 1         Operation        Contiguous  Count
+      {   "0111111111111111",    "0111111111111110",   Polarity::Normal,   Polarity::Normal,    Operation::Or,   false,        1},
 };
 
-TriggerStep trigger0x7FFFor0x7FFE[MAX_TRIGGER_STEPS] = {
-      //    Pattern 0               Pattern 1             Polarity 0          Polarity 1        Operation      Contiguous  Count
-      {   "0111111111111111",     "0111111111111110",    Polarity::Normal,   Polarity::Normal,  Operation::Or,    false,     1},
+TriggerStep triggersImmediate[MAX_TRIGGER_STEPS] = {
+      //   Pattern 0              Pattern 1            Polarity 0            Polarity 1         Operation        Contiguous  Count
+      {   "XXXXXXXXXXXXXXXX",    "XXXXXXXXXXXXXXX",    Polarity::Normal,   Polarity::Normal,    Operation::Or,  false,        0},
 };
 
 TriggerStep triggersdontcare[MAX_TRIGGER_STEPS] = {
-      // Pattern 0 Pattern 1      Polarity 0          Polarity 1      Operation      Contiguous  Count
-      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And,    false,      1},
-      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And,    false,      2},
-      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And,    false,      3},
-      {   "XX",     "XX",    Polarity::Normal,   Polarity::Normal,  Operation::And,    false,      4},
+      //   Pattern 0              Pattern 1            Polarity 0            Polarity 1         Operation        Contiguous  Count
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Normal,   Polarity::Normal,    Operation::And,  false,        1},
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Normal,   Polarity::Normal,    Operation::And,  false,        2},
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Normal,   Polarity::Normal,    Operation::And,  false,        3},
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Normal,   Polarity::Normal,    Operation::And,  false,        4},
 };
 
 TriggerStep triggers1[MAX_TRIGGER_STEPS] = {
-      // Pattern 0 Pattern 1      Polarity 0          Polarity 1          Count
-      {   "XX",     "XX",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 4},
-      {   "X0",     "X0",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 3},
-      {   "X1",     "X1",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 2},
-      {   "XC",     "XC",    Polarity::Normal,   Polarity::Disabled,  Operation::And, false, 7},
+      //   Pattern 0              Pattern 1            Polarity 0            Polarity 1         Operation        Contiguous  Count
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Normal,   Polarity::Disabled,  Operation::And,  false,        4},
+      {   "XXXXXXXXXXXXXX0",     "XXXXXXXXXXXXXX0",    Polarity::Normal,   Polarity::Disabled,  Operation::And,  false,        3},
+      {   "XXXXXXXXXXXXXX1",     "XXXXXXXXXXXXXX1",    Polarity::Normal,   Polarity::Disabled,  Operation::And,  false,        2},
+      {   "XXXXXXXXXXXXXXC",     "XXXXXXXXXXXXXXC",    Polarity::Normal,   Polarity::Disabled,  Operation::And,  false,        7},
 };
 
 TriggerStep triggers2[MAX_TRIGGER_STEPS] = {
-      // Pattern 0 Pattern 1      Polarity 0          Polarity 1          Count
-      {   "XX",     "XX",    Polarity::Disabled,   Polarity::Normal,  Operation::And, false, 100},
-      {   "X0",     "X1",    Polarity::Disabled,   Polarity::Normal,  Operation::And, false, 100},
-      {   "X1",     "X0",    Polarity::Disabled,   Polarity::Normal,  Operation::And, false, 100},
-      {   "XC",     "XF",    Polarity::Disabled,   Polarity::Normal,  Operation::And, false, 100},
+      //   Pattern 0              Pattern 1            Polarity 0            Polarity 1         Operation        Contiguous  Count
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Disabled,   Polarity::Normal,  Operation::And,  false,      100},
+      {   "XXXXXXXXXXXXXX0",     "XXXXXXXXXXXXXX1",    Polarity::Disabled,   Polarity::Normal,  Operation::And,  false,      100},
+      {   "XXXXXXXXXXXXXX1",     "XXXXXXXXXXXXXX0",    Polarity::Disabled,   Polarity::Normal,  Operation::And,  false,      100},
+      {   "XXXXXXXXXXXXXXC",     "XXXXXXXXXXXXXXF",    Polarity::Disabled,   Polarity::Normal,  Operation::And,  false,      100},
 };
 
 TriggerStep triggers3[MAX_TRIGGER_STEPS] = {
-      // Pattern 0 Pattern 1      Polarity 0          Polarity 1          Count
-      {   "XX",     "XX",    Polarity::Normal,     Polarity::Normal,  Operation::And, false, 100},
-      {   "X0",     "1X",    Polarity::Normal,     Polarity::Normal,  Operation::And, false, 100},
-      {   "X1",     "0X",    Polarity::Normal,     Polarity::Normal,  Operation::And, false, 100},
-      {   "XC",     "FX",    Polarity::Normal,     Polarity::Normal,  Operation::And, false, 100},
+      //   Pattern 0              Pattern 1            Polarity 0            Polarity 1         Operation        Contiguous  Count
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Normal,     Polarity::Normal,  Operation::And,  false,      100},
+      {   "XXXXXXXXXXXXXX0",     "XXXXXXXXXXXXX1X",    Polarity::Normal,     Polarity::Normal,  Operation::And,  false,      100},
+      {   "XXXXXXXXXXXXXX1",     "XXXXXXXXXXXXX0X",    Polarity::Normal,     Polarity::Normal,  Operation::And,  false,      100},
+      {   "XXXXXXXXXXXXXXC",     "XXXXXXXXXXXXXFX",    Polarity::Normal,     Polarity::Normal,  Operation::And,  false,      100},
 };
 
 TriggerStep triggers4[MAX_TRIGGER_STEPS] = {
-      // Pattern 0 Pattern 1      Polarity 0          Polarity 1          Count
-      {   "XX",     "XX",    Polarity::Normal,     Polarity::Normal,  Operation::Or, false, 100},
-      {   "X0",     "1X",    Polarity::Normal,     Polarity::Normal,  Operation::Or, false, 100},
-      {   "X1",     "0X",    Polarity::Normal,     Polarity::Normal,  Operation::Or, false, 100},
-      {   "XC",     "FX",    Polarity::Normal,     Polarity::Normal,  Operation::Or, false, 100},
+      //   Pattern 0              Pattern 1            Polarity 0            Polarity 1         Operation        Contiguous  Count
+      {   "XXXXXXXXXXXXXXX",     "XXXXXXXXXXXXXXX",    Polarity::Normal,     Polarity::Normal,  Operation::Or,   false,      100},
+      {   "XXXXXXXXXXXXXX0",     "XXXXXXXXXXXXX1X",    Polarity::Normal,     Polarity::Normal,  Operation::Or,   false,      100},
+      {   "XXXXXXXXXXXXXX1",     "XXXXXXXXXXXXX0X",    Polarity::Normal,     Polarity::Normal,  Operation::Or,   false,      100},
+      {   "XXXXXXXXXXXXXXC",     "XXXXXXXXXXXXXFX",    Polarity::Normal,     Polarity::Normal,  Operation::Or,   false,      100},
 };
 
 class PrintLuts {
@@ -97,8 +97,6 @@ class PrintLuts {
       console.writeln();
       console.write("   type StimulusArray is array (0 to ").write(4*number-1).writeln(") of DataBusType;");
       console.writeln("   variable stimulus : StimulusArray := (");
-//      console.writeln("      -- Preamble ");
-//      console.write("      C_LUT_CONFIG, ").write("\"").write(number, Radix_2).write("\", -- ").write(4*number).write(" bytes (").write(number).writeln(" LUTs)");
    }
 
    /**
@@ -166,6 +164,7 @@ public:
 };
 
 void writeLuts(FT2232 &ft2232, TriggerSetup &setup, bool verbose = false) {
+   static constexpr unsigned MAX_VALUES = 30000;
 
    uint32_t  lutValues[TOTAL_TRIGGER_LUTS] = {0};
    uint32_t *lutValuePtr = lutValues;
@@ -185,43 +184,64 @@ void writeLuts(FT2232 &ft2232, TriggerSetup &setup, bool verbose = false) {
       printLuts("Trigger Counts",      lutValues+START_TRIGGER_COUNT_LUTS, LUTS_FOR_TRIGGER_COUNTS);
       printLuts("Trigger Flags",       lutValues+START_TRIGGER_FLAG_LUTS, LUTS_FOR_TRIGGERS_FLAGS);
    }
+
    uint8_t *convertedData = setup.formatData(TOTAL_TRIGGER_LUTS, lutValues);
 
-   static const uint8_t loadLutsCommand[] = {C_LUT_CONFIG, TOTAL_TRIGGER_LUTS+2};
-   ft2232.transmitData(loadLutsCommand, sizeof(loadLutsCommand));
-
-   ft2232.transmitData(convertedData, 4*TOTAL_TRIGGER_LUTS);
+   unsigned bytesRemaining = 4*TOTAL_TRIGGER_LUTS;
+   while(bytesRemaining > 0) {
+      unsigned blockSize = bytesRemaining;
+      if (blockSize>MAX_VALUES) {
+         blockSize = MAX_VALUES;
+      }
+      uint8_t loadLutsCommand[] = {
+            C_LUT_CONFIG,
+            (uint8_t)blockSize,
+            (uint8_t)(blockSize>>8),
+      };
+      ft2232.transmitData(loadLutsCommand, sizeof(loadLutsCommand));
+      ft2232.transmitData(convertedData, blockSize);
+      bytesRemaining -= blockSize;
+      convertedData  += blockSize;
+   }
 }
 
 void writePreTrigger(FT2232 &ft2232, uint32_t pretrigValue, bool verbose = false) {
+   using namespace USBDM;
 
    if (verbose) {
       USBDM::console.write("PreTrigger(").write(pretrigValue).writeln(")");
    }
-   const uint8_t pretrigCommand[] = {
-         C_WR_PRETRIG, 3,
+   const uint8_t command[] = {
+         C_WR_PRETRIG,
          (uint8_t)(pretrigValue),
          (uint8_t)(pretrigValue>>8),
          (uint8_t)(pretrigValue>>16),
    };
-   ft2232.transmitData(pretrigCommand, sizeof(pretrigCommand));
+   ft2232.transmitData(command, sizeof(command));
+   console.setWidth(2).setPadding(Padding_LeadingZeroes).
+         write("transmitData(C_WR_PRETRIG,").write(command[1],Radix_16).write(",").write(command[2],Radix_16).write(",").write(command[3],Radix_16).writeln(")").resetFormat();
 }
 
 void writeCaptureLength(FT2232 &ft2232, uint32_t captureLength, bool verbose = false) {
+   using namespace USBDM;
 
    if (verbose) {
       USBDM::console.write("CaptureLength(").write(captureLength).writeln(")");
    }
-   static const uint8_t captureLengthCommand[] = {
-         C_WR_CAPTURE, 3,
+   static const uint8_t command[] = {
+         C_WR_CAPTURE,
          (uint8_t)(captureLength),
          (uint8_t)(captureLength>>8),
          (uint8_t)(captureLength>>16),
    };
-   ft2232.transmitData(captureLengthCommand, sizeof(captureLengthCommand));
+   ft2232.transmitData(command, sizeof(command));
+   console.setWidth(2).setPadding(Padding_LeadingZeroes).
+         write("transmitData(C_WR_CAPTURE,").write(command[1],Radix_16).write(",").write(command[2],Radix_16).write(",").write(command[3],Radix_16).writeln(")").resetFormat();
 }
 
 const char *getControlNames(uint8_t controlValue) {
+   using namespace USBDM;
+
    static USBDM::StringFormatter_T<100> sf;
    sf.clear();
    sf.write((controlValue & C_CONTROL_START_ACQ)?"C_CONTROL_START_ACQ|":"");
@@ -240,7 +260,9 @@ const char *getControlNames(uint8_t controlValue) {
 }
 
 const char *getStatuslNames(uint8_t statusValue) {
-   static USBDM::StringFormatter_T<100> sf;
+   using namespace USBDM;
+
+   static StringFormatter_T<100> sf;
    sf.clear();
 
    static const char *stateNames[]  = {
@@ -258,19 +280,25 @@ const char *getStatuslNames(uint8_t statusValue) {
 }
 
 void writeControl(FT2232 &ft2232, uint8_t controlValue, bool verbose = false) {
+   using namespace USBDM;
 
-   if (verbose) {
-      USBDM::console.write("Control(").write(getControlNames(controlValue)).write(", ").write(controlValue).writeln(")");
-   }
    const uint8_t readCommand[] = {
-         C_WR_CONTROL, 1,
+         C_WR_CONTROL,
          controlValue,
    };
+   if (verbose) {
+      console.write("transmitData(C_WR_CONTROL,").write(controlValue, Radix_16).writeln(")");
+      console.write("Control(").write(getControlNames(controlValue)).write(", ").write(controlValue, Radix_16).writeln(")");
+   }
    ft2232.transmitData(readCommand, sizeof(readCommand));
 }
 
 uint8_t readStatus(FT2232 &ft2232, bool verbose = false) {
+   using namespace USBDM;
 
+   if (verbose) {
+      USBDM::console.writeln("transmitData(C_RD_STATUS,1)");
+   }
    const uint8_t readCommand[] = {
          C_RD_STATUS, 1,
    };
@@ -278,46 +306,61 @@ uint8_t readStatus(FT2232 &ft2232, bool verbose = false) {
    uint8_t data[] = {0};
    ft2232.receiveData(data, sizeof(data));
    if (verbose) {
-      USBDM::console.write("readStatus() => ").write(getStatuslNames(data[0])).write(", ").writeln(data[0]);
+      console.write("receiveData(").write(data[0], Radix_16).writeln(")");
+      console.write("readStatus() => ").write(getStatuslNames(data[0])).write(", ").writeln(data[0], Radix_16);
    }
    return data[0];
 }
 
 uint8_t readVersion(FT2232 &ft2232, bool verbose = false) {
+   using namespace USBDM;
 
-   const uint8_t readCommand[] = {
+   if (verbose) {
+      USBDM::console.writeln("transmitData(C_RD_VERSION,1)");
+   }
+   uint8_t readCommand[] = {
          C_RD_VERSION, 1,
    };
    ft2232.transmitData(readCommand, sizeof(readCommand));
    uint8_t data[] = {0};
    ft2232.receiveData(data, sizeof(data));
    if (verbose) {
-      USBDM::console.write("readVersion() => ").writeln(data[0]);
+      console.write("receiveData(").write(data[0], Radix_16).writeln(")");
+      console.write("readVersion() => ").writeln(data[0], Radix_16);
    }
    return data[0];
 }
 
-void readCaptureData(FT2232 &ft2232, uint16_t *data, unsigned size, bool verbose = false) {
-   static constexpr unsigned MAX_VALUES = 20;
+void readCaptureData(FT2232 &ft2232, uint16_t *data, const unsigned size, bool verbose = false) {
+   using namespace USBDM;
+
+   static constexpr unsigned MAX_VALUES = 60000;
    if (verbose) {
       USBDM::console.writeln("readCaptureData() => ");
    }
-   while (size > 0) {
+   unsigned sizeInBytes = 2 * size;
+   while (sizeInBytes > 0) {
       // Size for this transfer in items (2 bytes)
-      unsigned blockSize = size;
+      unsigned blockSize = sizeInBytes;
       if (blockSize > MAX_VALUES) {
          blockSize = MAX_VALUES;
       }
+      console.write("transmitData(C_RD_BUFFER,(").
+            write(blockSize).write("),").
+            write((uint8_t)blockSize, Radix_16).write(",").write((uint8_t)((blockSize)>>8), Radix_16).writeln(")");
+
       uint8_t readCommand[] = {
-            C_RD_BUFFER, (uint8_t)(2*blockSize),
+            C_RD_BUFFER,
+            (uint8_t)(blockSize),
+            (uint8_t)((blockSize)>>8),
       };
       ft2232.transmitData(readCommand, sizeof(readCommand));
-      uint8_t buff[2*MAX_VALUES];
-      ft2232.receiveData(buff, 2*blockSize);
-      for (unsigned index=0; index<blockSize; index++) {
+      uint8_t buff[MAX_VALUES];
+      ft2232.receiveData(buff, blockSize);
+      for (unsigned index=0; index<blockSize/2; index++) {
          *data++ = buff[2*index] + (buff[(2*index)+1]<<16);
       }
-      size -= blockSize;
+      sizeInBytes -= blockSize;
    }
 }
 
@@ -347,19 +390,18 @@ void doCapture(
 
    writeLuts(ft2232, setup, false);
 
-   try {
-      uint8_t version = readVersion(ft2232, verbose);
-      USBDM::console.write("Version = ").writeln(version);
-   } catch (MyException &) {
-      USBDM::console.writeln("Unable to read version");
-   }
-
    writeCaptureLength(ft2232, setup.getSampleSize(), verbose);
 
    writePreTrigger(ft2232, setup.getPreTrigSize(), verbose);
 
    writeControl(ft2232, C_CONTROL_CLEAR, verbose);
    writeControl(ft2232, setup.getSampleRate(), verbose);
+
+   // Check idle
+   if (readStatus(ft2232, verbose) != C_STATUS_STATE_IDLE) {
+      throw MyException("Unexpected analyser state in doCapture");
+   }
+
    writeControl(ft2232, setup.getSampleRate()|C_CONTROL_START_ACQ, verbose);
 
    uint8_t state;
@@ -376,11 +418,10 @@ int main() {
    constexpr unsigned   CAPTURE_SIZE = 40000;
    constexpr SampleRate sampleRate   = SampleRate_100ns;
 
-   TriggerSetup setup = {trigger0x7FFFor0x7FFE, 0, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
-//   TriggerSetup setup = {triggersImmediate, 1, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
-//   TriggerSetup setup = {triggersdontcare, 4, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
-//   TriggerSetup setup = {triggers1, 4, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
-
+//   TriggerSetup setup = {trigger0x7FFFor0x7FFE, 0, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
+   TriggerSetup setup = {triggersImmediate, 0, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
+//   TriggerSetup setup = {triggersdontcare, 3, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
+//   TriggerSetup setup = {triggers1, 3, sampleRate, CAPTURE_SIZE, PRETRIG_SIZE};
 
    USBDM::console.
       write("Sample interval           = ").
@@ -392,6 +433,12 @@ int main() {
 
    try {
       FT2232 ft2232;
+      try {
+         uint8_t version = readVersion(ft2232, true);
+         USBDM::console.write("Version = ").writeln(version);
+      } catch (MyException &) {
+         USBDM::console.writeln("Unable to read version");
+      }
 
       int ch;
       do {

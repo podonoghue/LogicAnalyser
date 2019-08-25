@@ -82,15 +82,14 @@ begin
                --        host_transmit_data_ready is active.
                
                if (host_transmit_data_ready_internal = '1') and (host_transmit_data_request = '1') then
+                  state           <= s_send;
                   ft2232h_data_ff <= host_transmit_data;
-                  ft2232h_data_oe   <= '1';
-                  state           <=  s_send;
-                  --ft2232h_wr      <= '1';
+                  ft2232h_data_oe <= '1';
                   delayCount      <= 0;
                elsif (ft2232h_rxf = '1') and (host_receive_data_request = '1') then
-                  state       <= s_receive;
-                  ft2232h_rd  <= '1';
-                  delayCount  <= 0;
+                  state           <= s_receive;
+                  ft2232h_rd      <= '1';
+                  delayCount      <= 0;
                else
                   -- Can only send when FT2232 can accept data and interface is idle
                   host_transmit_data_ready_internal <= ft2232h_txe;               

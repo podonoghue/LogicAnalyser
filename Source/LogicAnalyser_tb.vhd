@@ -43,7 +43,6 @@ ARCHITECTURE behavior OF LogicAnalyser_tb IS
    constant clock100MHz_period  : time    := 10 ns;
    constant clock110MHz_period  : time    :=  9 ns; -- 110 MHz
    signal   complete            : boolean := false;
---   signal   writeLutsComplete   : boolean := false;
 
    signal   status : string(1 to 6);
    
@@ -186,6 +185,7 @@ begin
       report "Sample = 0b" & to_string(rd_data);
    end procedure;
 
+/*
 -- Or (T0[0111111111111111, Normal  ] T1[0111111111111110, Normal  ] ), Count = 1
 
    constant SIM_SAMPLE_WIDTH           : natural := 16;
@@ -369,47 +369,212 @@ begin
       "00000000", "00000000", "00000000", "00000000"
    );
 -- Or (T0[0111111111111111, Normal  ] T1[0111111111111110, Normal  ] ), Count = 1
-   
+*/
+-- Or (T0[XXXXXXXXXXXXXXXX, Normal  ] T1[XXXXXXXXXXXXXXXX, Normal  ] ), Count = 0
+
+   constant SIM_SAMPLE_WIDTH           : natural := 16;
+   constant SIM_MAX_TRIGGER_STEPS      : natural := 16;
+   constant SIM_MAX_TRIGGER_PATTERNS   : natural := 2;
+   constant SIM_NUM_TRIGGER_FLAGS      : natural := 2;
+   constant SIM_NUM_MATCH_COUNTER_BITS : natural := 16;
+   constant SIM_NUM_STIMULUS           : natural := 648;
+   constant SIM_NUM_PATTERN_STIMULUS   : natural := 512;
+   constant SIM_NUM_COMBINER_STIMULUS  : natural := 64;
+   constant SIM_NUM_COUNT_STIMULUS     : natural := 64;
+   constant SIM_NUM_FLAG_STIMULUS      : natural := 8;
+
+   type StimulusArray is array (0 to 647) of DataBusType;
+   variable stimulus : StimulusArray := (
+      -- PatternMatcher LUT values (128 LUTs)
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "11111111", "11111111", "11111111", "11111111",
+      "11111111", "11111111", "11111111", "11111111",
+      "11111111", "11111111", "11111111", "11111111",
+      "11111111", "11111111", "11111111", "11111111",
+      "11111111", "11111111", "11111111", "11111111",
+      "11111111", "11111111", "11111111", "11111111",
+      "11111111", "11111111", "11111111", "11111111",
+      "11111111", "11111111", "11111111", "11111111",
+      -- Combiner LUT values (16 LUTs)
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00001110",
+      -- Count LUT values (16 LUTs)
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000000",
+      "00000000", "00000000", "00000000", "00000001",
+      -- Flag LUT values (2 LUTs)
+      "00000000", "00000000", "00000000", "00000001",
+      "00000000", "00000000", "00000000", "00000000"
+   );
+-- Or (T0[XXXXXXXXXXXXXXXX, Normal  ] T1[XXXXXXXXXXXXXXXX, Normal  ] ), Count = 0
    variable receiveData   : DataBusType;
    constant preTrigCount  : positive := 10000;
    constant sampleCount   : positive := 40000;
-   variable stimulusIndex : natural := 0;
+   variable stimulusIndex : natural  := 0;
 
    begin
       status <= "Start ";
    
       wait for 60 ns;
 
+      status <= "Vers'n";
+      sendToAnalyser(C_RD_VERSION);
+      sendToAnalyser("00000000");
+      receiveFromAnalyser(receiveData);
+      
       status <= "Lu-Pat";
 
       sendToAnalyser(C_LUT_CONFIG);
-      sendToAnalyser(std_logic_vector(to_unsigned(SIM_NUM_PATTERN_STIMULUS/4, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned((SIM_NUM_PATTERN_STIMULUS) mod 256, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned((SIM_NUM_PATTERN_STIMULUS) / 256,   8)));
 
-      for index in 1 to SIM_NUM_PATTERN_STIMULUS/4 loop
-         sendToAnalyser(stimulus(stimulusIndex));
-         stimulusIndex := stimulusIndex + 1;
-      end loop;
-
-      sendToAnalyser(C_LUT_CONFIG);
-      sendToAnalyser(std_logic_vector(to_unsigned(SIM_NUM_PATTERN_STIMULUS/4, 8)));
-      
-      for index in 1 to SIM_NUM_PATTERN_STIMULUS/4 loop
-         sendToAnalyser(stimulus(stimulusIndex));
-         stimulusIndex := stimulusIndex + 1;
-      end loop;
-
-      sendToAnalyser(C_LUT_CONFIG);
-      sendToAnalyser(std_logic_vector(to_unsigned(SIM_NUM_PATTERN_STIMULUS/4, 8)));
-      
-      for index in 1 to SIM_NUM_PATTERN_STIMULUS/4 loop
-         sendToAnalyser(stimulus(stimulusIndex));
-         stimulusIndex := stimulusIndex + 1;
-      end loop;
-
-      sendToAnalyser(C_LUT_CONFIG);
-      sendToAnalyser(std_logic_vector(to_unsigned(SIM_NUM_PATTERN_STIMULUS/4, 8)));
-      
-      for index in 1 to SIM_NUM_PATTERN_STIMULUS/4 loop
+      for index in 1 to SIM_NUM_PATTERN_STIMULUS loop
          sendToAnalyser(stimulus(stimulusIndex));
          stimulusIndex := stimulusIndex + 1;
       end loop;
@@ -418,6 +583,7 @@ begin
 
       sendToAnalyser(C_LUT_CONFIG);
       sendToAnalyser(std_logic_vector(to_unsigned(SIM_NUM_COMBINER_STIMULUS, 8)));
+      sendToAnalyser("00000000");
       
       for index in 1 to SIM_NUM_COMBINER_STIMULUS loop
          sendToAnalyser(stimulus(stimulusIndex));
@@ -428,6 +594,7 @@ begin
 
       sendToAnalyser(C_LUT_CONFIG);
       sendToAnalyser(std_logic_vector(to_unsigned(SIM_NUM_COUNT_STIMULUS, 8)));
+      sendToAnalyser("00000000");
       
       for index in 1 to SIM_NUM_COUNT_STIMULUS loop
          sendToAnalyser(stimulus(stimulusIndex));
@@ -438,6 +605,7 @@ begin
 
       sendToAnalyser(C_LUT_CONFIG);
       sendToAnalyser(std_logic_vector(to_unsigned(SIM_NUM_FLAG_STIMULUS, 8)));
+      sendToAnalyser("00000000");
       
       for index in 1 to SIM_NUM_FLAG_STIMULUS loop
          sendToAnalyser(stimulus(stimulusIndex));
@@ -451,39 +619,34 @@ begin
          wait until (initializing = '0');
       end if;
       
-      status <= "W-Ptrg";
-      sendToAnalyser(C_WR_PRETRIG);
-      sendToAnalyser("00000011");
-      sendToAnalyser(std_logic_vector(to_unsigned(preTrigCount mod 256, 8)));
-      sendToAnalyser(std_logic_vector(to_unsigned((preTrigCount/256) mod 256, 8)));
-      sendToAnalyser(std_logic_vector(to_unsigned(preTrigCount/65526, 8)));
-
       status <= "W-Size";
       sendToAnalyser(C_WR_CAPTURE);
-      sendToAnalyser("00000011");
       sendToAnalyser(std_logic_vector(to_unsigned(sampleCount mod 256, 8)));
       sendToAnalyser(std_logic_vector(to_unsigned((sampleCount/256) mod 256, 8)));
-      sendToAnalyser(std_logic_vector(to_unsigned(sampleCount/65526, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned(sampleCount/65536, 8)));
 
-      status <= "Idle  ";
-      sendToAnalyser(C_WR_CONTROL);
-      sendToAnalyser("00000001");
-      sendToAnalyser("00000000");
+      status <= "W-Ptrg";
+      sendToAnalyser(C_WR_PRETRIG);
+      sendToAnalyser(std_logic_vector(to_unsigned(preTrigCount mod 256, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned((preTrigCount/256) mod 256, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned(preTrigCount/65536, 8)));
 
-      status <= "Spd50n";
+      status <= "W-Clr ";
       sendToAnalyser(C_WR_CONTROL);
-      sendToAnalyser("00000001");
+      sendToAnalyser(C_CONTROL_CLEAR);
+
+      status <= "W-Rate";
+      sendToAnalyser(C_WR_CONTROL);
       sendToAnalyser(C_CONTROL_S_100ns);
 
-      status <= "Enable";
+      status <= "W-Strt";
       sendToAnalyser(C_WR_CONTROL);
-      sendToAnalyser("00000001");
       sendToAnalyser(C_CONTROL_S_100ns or C_CONTROL_START_ACQ);
 
       status <= "Poll  ";
       loop
          sendToAnalyser(C_RD_STATUS);
-         sendToAnalyser("00000001");
+         sendToAnalyser("00000000");
          receiveFromAnalyser(receiveData);
          case receiveData(2 downto 0) is
             when "000"  => status <= "Idle  ";
@@ -497,36 +660,15 @@ begin
       end loop;
       wait for 200 ns;
       
-      status <= "Rd200a";
+      status <= "Rd-Buf";
       sendToAnalyser(C_RD_BUFFER);
-      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));
-      for index in 1 to 200 loop
+      sendToAnalyser(std_logic_vector(to_unsigned(sampleCount mod 256, 8)));
+      sendToAnalyser(std_logic_vector(to_unsigned(sampleCount / 256,   8)));
+      for index in 1 to sampleCount loop
          receiveFromAnalyser(receiveData);
       end loop;
       
-      status <= "Rd200b";
-      sendToAnalyser(C_RD_BUFFER);
-      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));
-      for index in 1 to 200 loop
-         receiveFromAnalyser(receiveData);
-      end loop;
-      
-      status <= "Rd200c";
-      sendToAnalyser(C_RD_BUFFER);
-      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));
-      for index in 1 to 200 loop
-         receiveFromAnalyser(receiveData);
-      end loop;
-      
-      status <= "Rd200d";
-      sendToAnalyser(C_RD_BUFFER);
-      sendToAnalyser(std_logic_vector(to_unsigned(200, 8)));      
-      for index in 1 to 200 loop
-         receiveFromAnalyser(receiveData);
-      end loop;
-
       status <= "Done  ";
---      writeLutsComplete <= true;
 
       wait for 100 ns;
       complete <= true;
