@@ -1,0 +1,6 @@
+#  Should be placed in /etc/udev/rules.d/48-cypress-eeprom.rules
+#  Note: HEX numbers must be lower case - yes really!!!!
+#
+# Allow unrestricted access to Cypress device
+ATTR{idVendor}=="2a0e", ATTR{idProduct}=="0020", SYMLINK+="cypress-eeprom%n",     MODE:="0666"
+

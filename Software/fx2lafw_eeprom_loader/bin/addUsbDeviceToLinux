@@ -1,0 +1,4 @@
+#/bin/bash
+
+read -p "This installs a file to /etc/udev/rules.d to allow unfettered access to a USB device. Press [Enter] key to continue..."
+sudo cp 48-cypress-eeprom.rules /etc/udev/rules.d/48-cypress-eeprom.rules
