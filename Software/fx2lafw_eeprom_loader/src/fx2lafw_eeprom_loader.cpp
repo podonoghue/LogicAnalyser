@@ -9,7 +9,8 @@
 #include <memory.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <windows.h>
+//#include <windows.h>
+#include <time.h>
 
 #include "HexImage.h"
 #include "LibusbCpp.h"
@@ -50,6 +51,27 @@ static const Libusb::UsbId usbIds[] = {
       {0x08A9, 0x0014, "Broken 24MHz LA"             },
       {0,0,0                                         },
 };
+
+int msleep(long msec)
+{
+    struct timespec ts;
+    int res;
+
+    if (msec < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ts.tv_sec = msec / 1000;
+    ts.tv_nsec = (msec % 1000) * 1000000;
+
+    do {
+        res = nanosleep(&ts, &ts);
+    } while (res && errno == EINTR);
+
+    return res;
+}
 
 /**
  * Download a block of up to 64 bytes to target RAM
@@ -316,7 +338,8 @@ void downloadEepromUtility(Libusb::Device device) {
    }
    releaseProcessorReset(device);
 
-   Sleep(100);
+   msleep(100);
+//   Sleep(100);
 }
 
 struct EepromTypes {
@@ -435,7 +458,7 @@ void verifyEeprom(EepromTypes eepromType, const char *new_load_filename) {
    verify_eeprom_image.setSize(eepromType.size);
 
    if (verify_eeprom_image.compare(original_eeprom_image) == 0) {
-      printf("Current EEPROM contents same as new image - verified OK");
+      printf("Current EEPROM contents same as new image - verified OK\n");
    }
    else {
       throw MyException("Verify failed");
