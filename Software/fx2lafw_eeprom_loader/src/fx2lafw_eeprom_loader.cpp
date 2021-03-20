@@ -47,7 +47,8 @@ static const Libusb::UsbId usbIds[] = {
       {0x0925, 0x3881, "Saleae Logic Analyser"       },
       {0x04B4, 0x8613, "Cypress evaluation board"    },
       {0x2A0E, 0x0020, "DSLogic Plus"                },
-      {0x2A0E, 0x0021, "DSLogic"                     },
+      {0x2A0E, 0x0021, "DSLogic Basic"               },
+      {0x2A0E, 0x0029, "DSLogic U2Basic"             },
       {0x08A9, 0x0014, "Broken 24MHz LA"             },
       {0,0,0                                         },
 };
