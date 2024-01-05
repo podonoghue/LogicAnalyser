@@ -1,6 +1,6 @@
 /*++
 
-Copyright © 2001-2011 Future Technology Devices International Limited
+Copyright ï¿½ 2001-2011 Future Technology Devices International Limited
 
 THIS SOFTWARE IS PROVIDED BY FUTURE TECHNOLOGY DEVICES INTERNATIONAL LIMITED "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -68,7 +68,7 @@ kernel & user mode
 
 #else // _WIN32
 // Compiling on non-Windows platform.
-#include "WinTypes.h"
+//#include "WinTypes.h"
 // No decorations needed.
 #define FTD2XX_API
 
